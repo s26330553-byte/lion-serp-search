@@ -356,11 +356,36 @@
     var noSeats  = formingAll.filter(hasAst);
     // 即將成團：排除已在特別警示的，避免重複顯示
     var forming  = formingAll.filter(function (r) { return !hasAst(r); });
-    // 已成團但可賣不足：備註含「成團」且可賣 < 5，排除備註含「NJ」的團
+    // ── 出發日期工具 ──────────────────────────────────────────
+    function departureDateObj(groupNo) {
+      var gn = groupNo.split(' ')[0];
+      if (gn.length < 7) return null;
+      var yr  = 2000 + parseInt(gn.slice(0, 2), 10);
+      var mc  = gn[4];
+      var day = parseInt(gn.slice(5, 7), 10);
+      var mo;
+      if (mc >= '1' && mc <= '9') mo = parseInt(mc, 10);
+      else if (mc === 'O') mo = 10;
+      else if (mc === 'N') mo = 11;
+      else if (mc === 'D') mo = 12;
+      else return null;
+      return new Date(yr, mo - 1, day);
+    }
+    function fmtDepDate(groupNo) {
+      var d = departureDateObj(groupNo);
+      if (!d) return '?';
+      return (d.getMonth() + 1) + '/' + d.getDate();
+    }
+    var _today = new Date(); _today.setHours(0, 0, 0, 0);
+    var _cutoff = new Date(_today.getTime() + 14 * 24 * 60 * 60 * 1000);
+
+    // 已成團但可賣不足：備註含「成團」、可賣 < 5、排除NJ、出發日在今後14天內
     var tightSeats = rows.filter(function (r) {
-      return r.remark.indexOf('成團') >= 0
-        && r.available < 5
-        && r.remark.indexOf('NJ') < 0;
+      if (r.remark.indexOf('成團') < 0) return false;
+      if (r.available >= 5) return false;
+      if (r.remark.indexOf('NJ') >= 0) return false;
+      var dep = departureDateObj(r.groupNo);
+      return dep && dep >= _today && dep <= _cutoff;
     });
     var byAirline = {};
     rows.forEach(function (r) {
@@ -470,6 +495,45 @@
       }));
     } catch (e) {}
 
+    // ── 出發日期排序鍵（month*100+day） ──────────────────────
+    function departureSortKey(groupNo) {
+      var gn = groupNo.split(' ')[0];
+      if (gn.length < 7) return 9999;
+      var mc  = gn[4];
+      var day = parseInt(gn.slice(5, 7), 10);
+      var mo;
+      if (mc >= '1' && mc <= '9') mo = parseInt(mc, 10);
+      else if (mc === 'O') mo = 10;
+      else if (mc === 'N') mo = 11;
+      else if (mc === 'D') mo = 12;
+      else return 9999;
+      return mo * 100 + day;
+    }
+
+    // ── 航班偵測 ──────────────────────────────────────────────
+    // BR：預設 BR116，備註含 BR166 → BR166
+    // CI：預設 CI130，備註含其他 CI 航班號碼 → 使用該航班
+    // JX：預設 JX850，標準團名含「函函」或「函千」→ JX860
+    function getFlightNo(r) {
+      var al  = r.airline;
+      var rmk = r.remark;
+      var tn  = (r._cells && r._cells[6]) ? r._cells[6] : '';
+      if (al === 'BR') {
+        if (rmk.indexOf('BR166') >= 0 || rmk.indexOf('166') >= 0) return 'BR166';
+        return 'BR116';
+      }
+      if (al === 'CI') {
+        var cm = rmk.match(/CI\s*(\d{3})/);
+        if (cm) return 'CI' + cm[1];
+        return 'CI130';
+      }
+      if (al === 'JX') {
+        if (tn.indexOf('函函') >= 0 || tn.indexOf('函千') >= 0) return 'JX860';
+        return 'JX850';
+      }
+      return al;
+    }
+
     var css =
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +
       'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }' +
@@ -528,23 +592,6 @@
         '</tr>';
     }
 
-    // 從團號解析出發日期排序鍵（month*100+day，同年可直接比大小）
-    function departureSortKey(groupNo) {
-      var gn = groupNo.split(' ')[0];
-      if (gn.length < 7) return 9999;
-      var datePart  = gn.slice(4, 7); // e.g. "523", "708", "O23", "N15", "D25"
-      var monthChar = datePart[0];
-      var day       = parseInt(datePart.slice(1), 10);
-      var month;
-      if (monthChar >= '1' && monthChar <= '9') {
-        month = parseInt(monthChar, 10);
-      } else if (monthChar === 'O') { month = 10; }
-      else if (monthChar === 'N')   { month = 11; }
-      else if (monthChar === 'D')   { month = 12; }
-      else { return 9999; }
-      return month * 100 + day;
-    }
-
     function mkTable(list) {
       if (list.length === 0) {
         return '<div class="empty">目前無符合條件的團體 ✓</div>';
@@ -570,6 +617,76 @@
         '<h2>' + title + '</h2>' +
         '<span class="badge" style="background:' + color + '">' + list.length + '</span>' +
         '</div>' + mkTable(list) + '</section>';
+    }
+
+    // ── 機位需求簡訊（可直接複製貼到 LINE） ──────────────────────
+    function mkSummaryMsg() {
+      function groupByFlight(list) {
+        var map = {};
+        list.forEach(function (r) {
+          var f = getFlightNo(r);
+          if (!map[f]) map[f] = [];
+          map[f].push(r);
+        });
+        return map;
+      }
+      function sortedFlights(map) {
+        return Object.keys(map).sort();
+      }
+      function sortRows(list) {
+        return list.slice().sort(function (a, b) {
+          return departureSortKey(a.groupNo) - departureSortKey(b.groupNo);
+        });
+      }
+
+      var lines = [];
+      var noByF = groupByFlight(noSeats);
+      var tgByF = groupByFlight(tightSeats);
+
+      if (sortedFlights(noByF).length) {
+        lines.push('即將成團但無現成機位');
+        sortedFlights(noByF).forEach(function (f) {
+          lines.push('');
+          lines.push(f);
+          sortRows(noByF[f]).forEach(function (r) {
+            lines.push(fmtDepDate(r.groupNo) + ' 需求一組');
+          });
+        });
+      }
+
+      if (sortedFlights(tgByF).length) {
+        if (lines.length) lines.push('');
+        lines.push('已成團可賣不足');
+        sortedFlights(tgByF).forEach(function (f) {
+          lines.push('');
+          lines.push(f);
+          sortRows(tgByF[f]).forEach(function (r) {
+            lines.push(fmtDepDate(r.groupNo) + ' ++散位');
+          });
+        });
+      }
+
+      if (!lines.length) return '';
+
+      var text = lines.join('\n');
+      var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      return '<section>' +
+        '<div class="sh" style="border-left:4px solid #37474f;color:#37474f">' +
+        '<h2>📨 機位需求簡訊</h2>' +
+        '<span style="font-size:12px;color:#888;margin-left:4px;">可直接複製貼至 LINE</span>' +
+        '</div>' +
+        '<div style="position:relative;background:white;border-radius:10px;' +
+             'box-shadow:0 1px 4px rgba(0,0,0,.1);padding:20px 24px 20px 20px;">' +
+        '<button id="__cp_btn" onclick="(function(b){' +
+          'navigator.clipboard.writeText(b.parentNode.querySelector(\'pre\').textContent)' +
+          '.then(function(){b.textContent=\'✓ 已複製\';setTimeout(function(){b.textContent=\'複製\'},1800)})' +
+        '})(this)" style="position:absolute;top:12px;right:12px;padding:5px 16px;' +
+        'background:#37474f;color:white;border:none;border-radius:6px;cursor:pointer;' +
+        'font-size:12px;font-weight:600;">複製</button>' +
+        '<pre style="font-family:Segoe UI,system-ui,sans-serif;font-size:14px;' +
+             'line-height:2;white-space:pre-wrap;margin:0;padding-right:60px;">' +
+        escaped + '</pre></div></section>';
     }
 
     // ── 欄位偵測結果 + 原始欄位診斷（底部可收折）──────────────────
@@ -667,8 +784,9 @@
                 '#e53935', noSeats) +
       mkSection('📋 即將成團（HK＋KK > 10）',
                 '#f57c00', forming) +
-      mkSection('🔔 已成團・可賣不足（可賣 < 5）',
+      mkSection('🔔 已成團・可賣不足（可賣 < 5，今後14天內出發）',
                 '#6a1b9a', tightSeats) +
+      mkSummaryMsg() +
       colDetectHtml +
       '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
       'ERP 機位報告　' + now + '</div>' +
