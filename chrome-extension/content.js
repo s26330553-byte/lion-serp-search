@@ -531,7 +531,9 @@
         return 'CI130';
       }
       if (al === 'JX') {
-        if (tn.indexOf('函函') >= 0 || tn.indexOf('函千') >= 0) return 'JX860';
+        if (tn.indexOf('函千') >= 0) return 'JX860 函千';
+        if (tn.indexOf('函函') >= 0) return 'JX860 函函';
+        if (tn.indexOf('千函') >= 0) return 'JX850 千函';
         return 'JX850';
       }
       return al;
