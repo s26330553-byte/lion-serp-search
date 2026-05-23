@@ -145,13 +145,14 @@
     '保留':     'reserved',
     '可賣':     'available',
     '可賀':     'available',
-    'JOIN':     'join'
+    'JOIN':     'join',
+    '天':       'days'
   };
 
   // 硬編碼備援（若 thead 偵測失敗才用）
   var FALLBACK_IDX = {
     groupNo: 2, airline: 3, remark: 10, totalSeats: 11,
-    hl: 13, hk: 17, kk: 16, reserved: 18, available: 19, join: 20
+    hl: 13, hk: 17, kk: 16, reserved: 18, available: 19, join: 20, days: 9
   };
 
   function resolveIdx(colMap) {
@@ -228,6 +229,7 @@
         reserved:   cn(idx.reserved),
         available:  cn(idx.available),
         join:       cn(idx.join),
+        days:       cn(idx.days),
         _cells:     cellTexts,    // 全部原始欄位值（依 index 取）
         _named:     namedCells    // 全部原始欄位值（依欄位名稱取）
       };
@@ -650,7 +652,8 @@
           lines.push('');
           lines.push(f);
           sortRows(noByF[f]).forEach(function (r) {
-            lines.push(fmtDepDate(r.groupNo) + ' 需求一組');
+            var dayStr = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            lines.push(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr);
           });
         });
       }
@@ -662,7 +665,8 @@
           lines.push('');
           lines.push(f);
           sortRows(tgByF[f]).forEach(function (r) {
-            lines.push(fmtDepDate(r.groupNo) + ' ++散位');
+            var dayStr = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            lines.push(fmtDepDate(r.groupNo) + ' ++散位' + dayStr);
           });
         });
       }
