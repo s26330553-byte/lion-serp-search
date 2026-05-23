@@ -1,0 +1,573 @@
+// content.js — ERP 機位資料擷取 + HTML 報告產生器（動態欄位偵測版）
+// 由 background.js 注入到 ERP SearchList 頁面執行
+
+(function () {
+
+  // ── 防止重複執行 ──────────────────────────────────────────────
+  if (window.__erpCapturing) {
+    alert('ERP 機位報告：擷取中，請稍候...');
+    return;
+  }
+
+  // ── 確認在 SearchList 頁面 ────────────────────────────────────
+  var pageSelect = document.querySelector('select[id="PageIndex"]');
+  if (!pageSelect) {
+    alert('ERP 機位報告：請在 SearchList 頁面（有頁碼下拉選單的頁面）使用');
+    return;
+  }
+  window.__erpCapturing = true;
+
+  // ── 進度浮層 ──────────────────────────────────────────────────
+  var overlay = document.createElement('div');
+  overlay.id = '__erp_ov';
+  overlay.style.cssText =
+    'position:fixed;inset:0;background:rgba(0,0,0,.72);' +
+    'z-index:2147483647;display:flex;align-items:center;justify-content:center;' +
+    'font-family:Segoe UI,system-ui,sans-serif;';
+
+  overlay.innerHTML =
+    '<div style="background:#fff;border-radius:16px;padding:36px 48px;' +
+    'text-align:center;min-width:340px;box-shadow:0 24px 64px rgba(0,0,0,.4);">' +
+    '<div style="font-size:22px;font-weight:700;margin-bottom:8px;">' +
+      '✈️ 擷取機位資料中</div>' +
+    '<div id="__erp_p" style="color:#666;font-size:14px;margin-bottom:20px;">' +
+      '初始化...</div>' +
+    '<div id="__erp_c" style="font-size:40px;font-weight:800;color:#1a73e8;' +
+      'letter-spacing:-1px;">0 筆</div>' +
+    '<div style="background:#eee;height:8px;border-radius:4px;margin-top:20px;overflow:hidden;">' +
+      '<div id="__erp_b" style="height:8px;' +
+        'background:linear-gradient(90deg,#1a73e8,#0d47a1);' +
+        'border-radius:4px;width:0%;transition:width .5s ease;"></div>' +
+    '</div>' +
+    '<div style="margin-top:12px;font-size:12px;color:#bbb;">' +
+      '請勿關閉或切換頁面</div>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  function upd(msg, cur, tot) {
+    var ep = document.getElementById('__erp_p');
+    var ec = document.getElementById('__erp_c');
+    var eb = document.getElementById('__erp_b');
+    if (ep) ep.textContent = msg;
+    if (ec) ec.textContent = cur + ' 筆';
+    if (eb) eb.style.width = (tot > 0 ? Math.min(cur / tot * 100, 99) : 0) + '%';
+  }
+
+  // ── 嘗試預開報告視窗（在第一個 await 前，屬於 user gesture 範圍） ──
+  var reportWin = null;
+  try {
+    reportWin = window.open('', 'erp_report');
+    if (reportWin) {
+      reportWin.document.write(
+        '<html><body style="font-family:Segoe UI,sans-serif;display:flex;' +
+        'align-items:center;justify-content:center;min-height:100vh;' +
+        'margin:0;background:#f0f2f5;">' +
+        '<div style="text-align:center;color:#888;">' +
+        '<div style="font-size:48px;margin-bottom:16px;">✈️</div>' +
+        '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">' +
+          '資料擷取中，請稍候...</div>' +
+        '<div style="font-size:14px;">' +
+          '擷取完成後本頁自動更新</div>' +
+        '</div></body></html>'
+      );
+    }
+  } catch (e) { reportWin = null; }
+
+  // ── 工具函式 ──────────────────────────────────────────────────
+  function sleep(ms) {
+    return new Promise(function (r) { setTimeout(r, ms); });
+  }
+
+  function isValidGrp(t) {
+    // 月份：1-9月用數字，10月以後用字母（O/N/D）
+    return /^\d{2}[A-Z]{2}[A-Z\d]{3}[A-Z]{2}/.test(t);
+  }
+
+  // ── 動態偵測欄位位置（從所有含 <th> 的列解析，處理 colspan/rowspan） ──
+  // ASP.NET GridView 不用 <thead>，header 就在 <tbody> 第一列 <th> 裡
+  // 回傳 { '欄位名稱': 欄位索引, ... }
+  function buildColMap(table) {
+    var map = {};
+
+    // 找所有「直接子 <th> 數量 >= 5」的 <tr>（這就是標題列）
+    var allRows = Array.prototype.slice.call(table.querySelectorAll('tr'));
+    var theadRows = allRows.filter(function (tr) {
+      return tr.querySelectorAll(':scope > th').length >= 5;
+    });
+    if (!theadRows.length) return map;
+
+    // 用 grid 追蹤每個格子被哪個 header 佔用（rowspan/colspan 跨欄）
+    var grid = [];
+
+    for (var ri = 0; ri < theadRows.length; ri++) {
+      if (!grid[ri]) grid[ri] = [];
+      var ths = Array.prototype.slice.call(
+        theadRows[ri].querySelectorAll(':scope > th, :scope > td')
+      );
+      var col = 0;
+      for (var ci = 0; ci < ths.length; ci++) {
+        // 跳過已被上方 rowspan 佔用的欄位
+        while (grid[ri][col] !== undefined) col++;
+
+        var text = ths[ci].textContent.replace(/[\s\n\r　]/g, '').trim();
+        var cs   = Math.max(1, parseInt(ths[ci].getAttribute('colspan') || '1', 10));
+        var rs   = Math.max(1, parseInt(ths[ci].getAttribute('rowspan') || '1', 10));
+
+        // 填入 grid（讓後續 row 知道哪些欄已被佔用）
+        for (var r2 = 0; r2 < rs; r2++) {
+          for (var c2 = 0; c2 < cs; c2++) {
+            if (!grid[ri + r2]) grid[ri + r2] = [];
+            grid[ri + r2][col + c2] = text || '_';
+          }
+        }
+
+        // 記錄欄位名稱→索引（同名只取第一次出現的位置）
+        if (text && map[text] === undefined) map[text] = col;
+
+        col += cs;
+      }
+    }
+
+    return map;
+  }
+
+  // ── 欄位別名對映（ERP 中文/英文名稱 → 內部 key） ─────────────
+  var FIELD_ALIAS = {
+    '團號':     'groupNo',
+    '航空':     'airline',
+    '團控說明':  'remark',
+    '備註':     'remark',
+    '團位':     'totalSeats',
+    'HL':       'hl',
+    'HK':       'hk',
+    'KK':       'kk',
+    '保留':     'reserved',
+    '可賣':     'available',
+    '可賀':     'available',
+    'JOIN':     'join'
+  };
+
+  // 硬編碼備援（若 thead 偵測失敗才用）
+  var FALLBACK_IDX = {
+    groupNo: 2, airline: 3, remark: 10, totalSeats: 11,
+    hl: 13, hk: 17, kk: 16, reserved: 18, available: 19, join: 20
+  };
+
+  function resolveIdx(colMap) {
+    var idx = {};
+    // 優先從偵測結果取
+    Object.keys(FIELD_ALIAS).forEach(function (colName) {
+      var fieldName = FIELD_ALIAS[colName];
+      if (colMap[colName] !== undefined && idx[fieldName] === undefined) {
+        idx[fieldName] = colMap[colName];
+      }
+    });
+    // 補入備援
+    Object.keys(FALLBACK_IDX).forEach(function (k) {
+      if (idx[k] === undefined) idx[k] = FALLBACK_IDX[k];
+    });
+    return idx;
+  }
+
+  // ── 從 Document 擷取資料列 ───────────────────────────────────
+  // 回傳 { colMap, rows }
+  function extractRows(doc) {
+    var tables = Array.prototype.slice.call(doc.querySelectorAll('table'));
+    var best = tables.reduce(function (b, t) {
+      var n = t.querySelectorAll(':scope > tbody > tr').length;
+      return n > (b ? b.count : 0) ? { t: t, count: n } : b;
+    }, null);
+    if (!best) return { colMap: {}, rows: [] };
+
+    var table  = best.t;
+    var colMap = buildColMap(table);
+    var idx    = resolveIdx(colMap);
+
+    var result = [];
+    var trs    = table.querySelectorAll(':scope > tbody > tr');
+
+    for (var ri = 0; ri < trs.length; ri++) {
+      var cells = Array.prototype.slice.call(trs[ri].querySelectorAll(':scope > td'));
+      if (cells.length < 10) continue;
+
+      // 所有欄位原始文字（換行符號換成空白，方便顯示）
+      var cellTexts = cells.map(function (td) {
+        return td.textContent.replace(/\n/g, ' ').trim();
+      });
+
+      function ct(i) {
+        return (i !== undefined && cellTexts[i] !== undefined) ? cellTexts[i] : '';
+      }
+      function cn(i) {
+        if (i === undefined) return 0;
+        var n = parseInt((cellTexts[i] || '').replace(/,/g, ''), 10);
+        return isNaN(n) ? 0 : n;
+      }
+
+      // 團號：取第一行（避免 cell 內有副文字）
+      var grpCell = cells[idx.groupNo];
+      var grp = grpCell ? grpCell.textContent.trim().split('\n')[0].trim() : '';
+      if (!isValidGrp(grp)) continue;
+
+      // 依偵測到的欄位名稱建立命名物件（所有欄位，未來直接用欄位名取值）
+      var namedCells = {};
+      Object.keys(colMap).forEach(function (name) {
+        namedCells[name] = cellTexts[colMap[name]] || '';
+      });
+
+      var row = {
+        groupNo:    grp,
+        airline:    ct(idx.airline),
+        orderType:  cellTexts[4] || '',  // cells[4]＝航空右邊的「圍/団」欄（TKT / T/O / …）
+        remark:     ct(idx.remark),
+        totalSeats: cn(idx.totalSeats),
+        hl:         cn(idx.hl),
+        hk:         cn(idx.hk),
+        kk:         cn(idx.kk),
+        reserved:   cn(idx.reserved),
+        available:  cn(idx.available),
+        join:       cn(idx.join),
+        _cells:     cellTexts,    // 全部原始欄位值（依 index 取）
+        _named:     namedCells    // 全部原始欄位值（依欄位名稱取）
+      };
+
+      result.push(row);
+    }
+
+    return { colMap: colMap, rows: result };
+  }
+
+  // ── Fetch 指定頁 ──────────────────────────────────────────────
+  async function fetchPage(pageIndex, prevDoc) {
+    var form = document.querySelector('form#SearchListForm');
+    if (!form) throw new Error('找不到 SearchListForm');
+    var fd = new FormData(form);
+    if (prevDoc) {
+      var hids = prevDoc.querySelectorAll('input[type="hidden"]');
+      for (var hi = 0; hi < hids.length; hi++) {
+        if (hids[hi].name) fd.set(hids[hi].name, hids[hi].value);
+      }
+    }
+    fd.set('PageIndex', String(pageIndex));
+    var res = await fetch(form.action, {
+      method: 'POST', body: fd, credentials: 'include'
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.text();
+  }
+
+  // ── 主擷取邏輯（async IIFE） ──────────────────────────────────
+  (async function () {
+    var totalPages = pageSelect.querySelectorAll('option').length;
+    var startPage  = parseInt(pageSelect.value, 10);
+    var allRows    = [];
+    var colMap     = {};
+    var parser     = new DOMParser();
+    var prevDoc    = null;
+    var estTotal   = totalPages * 95;
+
+    // 第一頁：直接從當前 document 讀
+    upd('第 ' + startPage + ' / ' + totalPages + ' 頁', 0, estTotal);
+    var firstResult = extractRows(document);
+    colMap  = firstResult.colMap;
+    allRows = firstResult.rows;
+    upd('第 ' + startPage + ' / ' + totalPages + ' 頁（' +
+        allRows.length + ' 筆）', allRows.length, estTotal);
+
+    // 後續頁：逐頁 fetch
+    for (var page = startPage + 1; page <= totalPages; page++) {
+      await sleep(800 + Math.random() * 700);
+      try {
+        upd('第 ' + page + ' / ' + totalPages + ' 頁',
+            allRows.length, estTotal);
+        var html = await fetchPage(page, prevDoc);
+        var doc  = parser.parseFromString(html, 'text/html');
+        prevDoc  = doc;
+        var pr   = extractRows(doc);
+        // 若第一頁沒抓到 colMap，用後續頁補上
+        if (!Object.keys(colMap).length && Object.keys(pr.colMap).length) {
+          colMap = pr.colMap;
+        }
+        allRows = allRows.concat(pr.rows);
+        upd('第 ' + page + ' / ' + totalPages + ' 頁（' +
+            pr.rows.length + ' 筆）', allRows.length, estTotal);
+      } catch (e) {
+        console.error('[ERP] page ' + page + ' failed:', e);
+        break;
+      }
+    }
+
+    // ── 移除浮層 ────────────────────────────────────────────────
+    var ov = document.getElementById('__erp_ov');
+    if (ov) ov.parentNode.removeChild(ov);
+    window.__erpCapturing = false;
+
+    // ── 輸出報告 ────────────────────────────────────────────────
+    var reportHTML = buildReport(allRows, colMap);
+
+    if (reportWin && !reportWin.closed) {
+      try {
+        reportWin.document.open();
+        reportWin.document.write(reportHTML);
+        reportWin.document.close();
+        reportWin.focus();
+      } catch (e) {
+        downloadReport(reportHTML);
+      }
+    } else {
+      downloadReport(reportHTML);
+    }
+  })();
+
+  function downloadReport(html) {
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'erp-report-' + new Date().toISOString().slice(0, 10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── 報告 HTML 產生器 ──────────────────────────────────────────
+  function buildReport(rows, colMap) {
+    var now = new Date().toLocaleString('zh-TW', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+
+    function hasAst(r) {
+      // 只看全形＊（U+FF0A），半形 * 不算
+      return r.remark.indexOf('＊') >= 0;
+    }
+
+    // ── 篩選邏輯 ──────────────────────────────────────────────
+    // 基礎集合：HK+KK > 5，排除已成團與 TKT 純機票
+    var formingAll = rows.filter(function (r) {
+      return (r.hk + r.kk) > 5
+        && r.remark.indexOf('成團') < 0
+        && r.orderType.indexOf('TKT') < 0;
+    });
+    // 特別警示：無現成機位（備註含全形＊）
+    var noSeats  = formingAll.filter(hasAst);
+    // 即將成團：排除已在特別警示的，避免重複顯示
+    var forming  = formingAll.filter(function (r) { return !hasAst(r); });
+    // 已成團但可賣不足：備註含「成團」且可賣 < 5，排除備註含「NJ」的團
+    var tightSeats = rows.filter(function (r) {
+      return r.remark.indexOf('成團') >= 0
+        && r.available < 5
+        && r.remark.indexOf('NJ') < 0;
+    });
+    var byAirline = {};
+    rows.forEach(function (r) {
+      byAirline[r.airline] = (byAirline[r.airline] || 0) + 1;
+    });
+
+    var css =
+      '* { box-sizing: border-box; margin: 0; padding: 0; }' +
+      'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }' +
+      'header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 24px 32px; }' +
+      'header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }' +
+      '.meta { font-size: 13px; color: rgba(255,255,255,.6); }' +
+      '.stats { display: flex; flex-wrap: wrap; background: white; border-bottom: 1px solid #e8eaed; }' +
+      '.stat { flex: 1; min-width: 80px; text-align: center; padding: 16px 8px; border-right: 1px solid #e8eaed; }' +
+      '.stat:last-child { border-right: none; }' +
+      '.sn { font-size: 28px; font-weight: 800; line-height: 1; }' +
+      '.sl { font-size: 11px; color: #888; margin-top: 4px; }' +
+      'section { margin: 24px; }' +
+      '.sh { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-left: 14px; }' +
+      '.sh h2 { font-size: 17px; font-weight: 700; }' +
+      '.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 700; color: white; }' +
+      '.empty { background: white; border-radius: 8px; padding: 28px; text-align: center; color: #aaa; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }' +
+      'table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 13px; }' +
+      'thead th { background: #2c3e50; color: white; padding: 11px 12px; text-align: left; font-weight: 500; white-space: nowrap; }' +
+      'tbody td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }' +
+      'tbody tr:last-child td { border-bottom: none; }' +
+      'tbody tr:hover td { background: #f8f9fa; }' +
+      'tbody tr.w td { background: #fff3f3; }' +
+      'tbody tr.w:hover td { background: #ffe8e8; }' +
+      '.al { display: inline-block; padding: 2px 8px; border-radius: 5px; font-weight: 700; font-size: 12px; }' +
+      '.alBR { background: #e8f4ff; color: #1558d6; }' +
+      '.alCI { background: #fce8e6; color: #c62828; }' +
+      '.alJX { background: #e8f4ff; color: #0077cc; }' +
+      '.rm { max-width: 280px; color: #555; word-break: break-all; line-height: 1.4; }' +
+      '.ast { color: #e53935; font-weight: 900; font-size: 15px; }' +
+      '.hkk { font-weight: 700; }' +
+      '.hi  { color: #e53935; font-weight: 800; }' +
+      '.neg { color: #e53935; font-weight: 800; }' +
+      'details { cursor: default; }' +
+      'details summary { cursor: pointer; user-select: none; }';
+
+    function mkRow(r) {
+      var warn = hasAst(r);
+      var hkk  = r.hk + r.kk;
+      var rmk  = r.remark.replace(/＊/g, '<span class="ast">＊</span>');
+      return '<tr class="' + (warn ? 'w' : '') + '">' +
+        '<td style="font-family:monospace;white-space:nowrap">' +
+          r.groupNo.split(' ')[0] + '</td>' +
+        '<td><span class="al al' + r.airline + '">' + r.airline + '</span></td>' +
+        '<td class="rm">' + rmk + '</td>' +
+        '<td style="text-align:center">' + r.totalSeats + '</td>' +
+        '<td style="text-align:center">' + r.hl + '</td>' +
+        '<td style="text-align:center">' + r.hk + '</td>' +
+        '<td style="text-align:center">' + r.kk + '</td>' +
+        '<td style="text-align:center" class="hkk' + (hkk >= 30 ? ' hi' : '') + '">' +
+          hkk + '</td>' +
+        '<td style="text-align:center">' + r.reserved + '</td>' +
+        '<td style="text-align:center' +
+          (r.available < 0 ? ';color:#e53935;font-weight:800' : '') + '">' +
+          r.available + '</td>' +
+        '<td style="text-align:center">' + r.join + '</td>' +
+        '</tr>';
+    }
+
+    // 從團號解析出發日期排序鍵（month*100+day，同年可直接比大小）
+    function departureSortKey(groupNo) {
+      var gn = groupNo.split(' ')[0];
+      if (gn.length < 7) return 9999;
+      var datePart  = gn.slice(4, 7); // e.g. "523", "708", "O23", "N15", "D25"
+      var monthChar = datePart[0];
+      var day       = parseInt(datePart.slice(1), 10);
+      var month;
+      if (monthChar >= '1' && monthChar <= '9') {
+        month = parseInt(monthChar, 10);
+      } else if (monthChar === 'O') { month = 10; }
+      else if (monthChar === 'N')   { month = 11; }
+      else if (monthChar === 'D')   { month = 12; }
+      else { return 9999; }
+      return month * 100 + day;
+    }
+
+    function mkTable(list) {
+      if (list.length === 0) {
+        return '<div class="empty">目前無符合條件的團體 ✓</div>';
+      }
+      var sorted = list.slice().sort(function (a, b) {
+        var da = departureSortKey(a.groupNo);
+        var db = departureSortKey(b.groupNo);
+        if (da !== db) return da - db;
+        return (b.hk + b.kk) - (a.hk + a.kk);
+      });
+      return '<table>' +
+        '<thead><tr>' +
+        '<th>團號</th><th>航空</th><th>團控說明</th>' +
+        '<th>團位</th><th>HL</th><th>HK</th><th>KK</th><th>HK+KK</th>' +
+        '<th>保留</th><th>可賣</th><th>JOIN</th>' +
+        '</tr></thead>' +
+        '<tbody>' + sorted.map(mkRow).join('') + '</tbody></table>';
+    }
+
+    function mkSection(title, color, list) {
+      return '<section>' +
+        '<div class="sh" style="border-left:4px solid ' + color + ';color:' + color + '">' +
+        '<h2>' + title + '</h2>' +
+        '<span class="badge" style="background:' + color + '">' + list.length + '</span>' +
+        '</div>' + mkTable(list) + '</section>';
+    }
+
+    // ── 欄位偵測結果 + 原始欄位診斷（底部可收折）──────────────────
+    var colDetectHtml = '';
+
+    // 1. 欄位偵測對應表
+    var keyFields = ['團號', '航空', '圍控說明', '圍位', 'HL', 'OB', 'HK', 'KK', '保留', '可賀', '可賣', 'JOIN', 'T', 'J'];
+    var detectedLines = keyFields
+      .filter(function (k) { return colMap[k] !== undefined; })
+      .map(function (k)    { return k + '→[' + colMap[k] + ']'; });
+
+    var detectionStatus = detectedLines.length
+      ? detectedLines.join('　')
+      : '⚠ 偵測失敗（表格無 &lt;th&gt; 標題列，使用備援索引）';
+
+    // 2. 即將成團各列的原始 _cells 診斷表（前 10 列）
+    var diagRows = forming.slice(0, 10);
+    var maxCells = diagRows.reduce(function (m, r) {
+      return Math.max(m, r._cells ? r._cells.length : 0);
+    }, 0);
+    maxCells = Math.min(maxCells, 28); // 最多顯示 28 欄
+
+    var diagHtml = '';
+    if (diagRows.length) {
+      var diagHead = '<tr><th style="background:#455a64">團號</th>';
+      for (var di = 0; di < maxCells; di++) {
+        diagHead += '<th style="background:#455a64">[' + di + ']</th>';
+      }
+      diagHead += '</tr>';
+
+      var diagBody = diagRows.map(function (r) {
+        var cells = r._cells || [];
+        var tds = '';
+        for (var di = 0; di < maxCells; di++) {
+          var v = cells[di] !== undefined ? cells[di] : '';
+          // 標記有數值（非空）的格子
+          var style = v && v !== '0' ? 'background:#e8f5e9;font-weight:700' : 'color:#ccc';
+          tds += '<td style="' + style + ';text-align:center;padding:4px 6px;' +
+                 'border:1px solid #eee;white-space:nowrap;max-width:80px;' +
+                 'overflow:hidden;font-size:11px">' + (v || '·') + '</td>';
+        }
+        return '<tr><td style="font-family:monospace;padding:4px 8px;border:1px solid #eee;' +
+               'white-space:nowrap;font-size:11px">' + r.groupNo.split(' ')[0] + '</td>' +
+               tds + '</tr>';
+      }).join('');
+
+      diagHtml =
+        '<table style="border-collapse:collapse;width:100%;font-size:11px;' +
+        'background:white;margin-top:8px"><thead>' + diagHead + '</thead>' +
+        '<tbody>' + diagBody + '</tbody></table>';
+    }
+
+    colDetectHtml =
+      '<details style="margin:0 24px 24px;font-size:12px;color:#555;">' +
+      '<summary style="cursor:pointer;padding:8px 0;font-weight:600;">' +
+        '🔍 欄位偵測與診斷（點開確認數字是否正確）</summary>' +
+      '<div style="margin-top:8px;padding:10px 14px;background:#f8f9fa;' +
+           'border-radius:6px;line-height:2;font-family:monospace;word-break:break-all;">' +
+      detectionStatus +
+      '</div>' +
+      (diagHtml
+        ? '<div style="margin-top:8px;overflow-x:auto;">' + diagHtml + '</div>' +
+          '<div style="margin-top:6px;color:#aaa;font-size:11px;">' +
+          '非零值以綠底標記。確認 HK / KK / 保留 / 可賀 的 [N] 與上方偵測對應表一致即正確。</div>'
+        : '') +
+      '</details>';
+
+    var statItems = [
+      { n: rows.length,            l: '總團數',        c: '#1a1a2e' },
+      { n: byAirline['BR'] || 0,   l: 'BR 長榮',       c: '#1558d6' },
+      { n: byAirline['CI'] || 0,   l: 'CI 華航',       c: '#c62828' },
+      { n: byAirline['JX'] || 0,   l: 'JX 星宇',       c: '#2e7d32' },
+      { n: noSeats.length,         l: '⚠ 無現成機位',  c: '#e53935' },
+      { n: forming.length,         l: '即將成團',       c: '#f57c00' },
+      { n: tightSeats.length,      l: '成團・可賣不足', c: '#6a1b9a' }
+    ];
+    var statsHtml = statItems.map(function (s) {
+      return '<div class="stat"><div class="sn" style="color:' + s.c + '">' + s.n +
+             '</div><div class="sl">' + s.l + '</div></div>';
+    }).join('');
+
+    return '<!DOCTYPE html><html lang="zh-TW"><head>' +
+      '<meta charset="UTF-8">' +
+      '<meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>ERP 機位報告 ' + now.slice(0, 10) + '</title>' +
+      '<style>' + css + '</style></head><body>' +
+      '<header>' +
+      '<h1>✈️ ERP 機位狀態報告</h1>' +
+      '<div class="meta">擷取時間：' + now +
+        '　共 ' + rows.length + ' 筆資料</div>' +
+      '</header>' +
+      '<div class="stats">' + statsHtml + '</div>' +
+      mkSection('⚠ 特別警示：即將成團但無現成機位',
+                '#e53935', noSeats) +
+      mkSection('📋 即將成團（HK＋KK > 5）',
+                '#f57c00', forming) +
+      mkSection('🔔 已成團・可賣不足（可賣 < 5）',
+                '#6a1b9a', tightSeats) +
+      colDetectHtml +
+      '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
+      'ERP 機位報告　' + now + '</div>' +
+      '</body></html>';
+  }
+
+})();

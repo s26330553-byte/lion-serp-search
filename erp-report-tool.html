@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ERP 機位擷取器</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #f5f7fa; color: #333; }
+
+    .hero {
+      background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+      color: white; padding: 48px 32px; text-align: center;
+    }
+    .hero h1 { font-size: 30px; font-weight: 800; margin-bottom: 8px; }
+    .hero p  { font-size: 15px; color: rgba(255,255,255,.65); margin-top: 6px; }
+
+    .main { max-width: 820px; margin: 0 auto; padding: 32px 20px 48px; }
+
+    .card {
+      background: white; border-radius: 12px; padding: 28px 32px;
+      margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    }
+    .card h2 {
+      font-size: 15px; font-weight: 700; color: #1a1a2e;
+      margin-bottom: 18px; padding-bottom: 12px; border-bottom: 2px solid #f0f2f5;
+    }
+
+    /* 複製按鈕區 */
+    .copy-area {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px; padding: 32px 24px; background: #f0f7ff;
+      border-radius: 12px; border: 2px solid #bfdbfe;
+    }
+    #copy-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 16px 36px; font-size: 17px; font-weight: 700;
+      background: linear-gradient(135deg, #1a73e8, #0d47a1);
+      color: white; border: none; border-radius: 10px; cursor: pointer;
+      box-shadow: 0 4px 15px rgba(26,115,232,.4);
+      transition: transform .15s, box-shadow .15s;
+    }
+    #copy-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(26,115,232,.5); }
+    #copy-btn:active { transform: scale(.97); }
+    #copy-msg {
+      display: none; font-size: 14px; font-weight: 600;
+      color: #2e7d32; background: #f0fff4;
+      padding: 8px 20px; border-radius: 8px; border: 1px solid #bbf7d0;
+    }
+
+    /* 手動安裝步驟 */
+    .install-steps {
+      display: grid; grid-template-columns: 28px 1fr;
+      gap: 8px 12px; align-items: start;
+      margin-top: 4px;
+    }
+    .install-steps .num {
+      display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; background: #1a73e8;
+      color: white; border-radius: 50%; font-size: 13px; font-weight: 700;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .install-steps .txt { font-size: 14px; color: #444; line-height: 1.6; padding-top: 2px; }
+    .install-steps code {
+      display: inline-block; background: #f0f2f5; padding: 1px 8px;
+      border-radius: 4px; font-family: monospace; font-size: 13px; color: #1a1a2e;
+    }
+
+    /* 使用說明 */
+    .steps { list-style: none; counter-reset: step; }
+    .steps li {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 11px 0; border-bottom: 1px solid #f0f2f5;
+      font-size: 14px; color: #444; line-height: 1.5;
+    }
+    .steps li:last-child { border-bottom: none; }
+    .steps li::before {
+      content: counter(step); counter-increment: step;
+      display: flex; align-items: center; justify-content: center;
+      min-width: 26px; height: 26px; background: #1a73e8;
+      color: white; border-radius: 50%; font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+
+    /* 報告說明 */
+    .legend { display: flex; flex-direction: column; gap: 12px; }
+    .legend-item {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 16px; border-radius: 8px; font-size: 14px;
+    }
+    .legend-item.warn { background: #fff3f3; border-left: 4px solid #e53935; }
+    .legend-item.ok   { background: #f0fff4; border-left: 4px solid #2e7d32; }
+    .legend-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .legend-text strong { display: block; font-size: 14px; margin-bottom: 4px; color: #222; }
+    .legend-text span   { color: #666; font-size: 13px; line-height: 1.5; }
+
+    /* 隱藏書籤連結（供舊版瀏覽器備用） */
+    #bm-link {
+      display: inline-block; padding: 8px 20px; font-size: 13px;
+      background: #f0f2f5; color: #666; text-decoration: none;
+      border-radius: 8px; cursor: grab; user-select: none;
+    }
+
+    .footer { text-align: center; padding: 20px; color: #bbb; font-size: 12px; }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <h1>✈️ ERP 機位擷取器</h1>
+  <p>一鍵擷取全部機位資料，自動產出狀態報告</p>
+</div>
+
+<div class="main">
+
+  <!-- ① 安裝書籤 -->
+  <div class="card">
+    <h2>📌 第一步：安裝書籤（僅需一次）</h2>
+
+    <div class="copy-area">
+      <button id="copy-btn" onclick="copyBookmarklet()">📋 複製書籤網址</button>
+      <div id="copy-msg">✓ 已複製到剪貼簿，繼續下方步驟</div>
+      <a id="bm-link" href="#" onclick="return false;" title="或直接拖曳到書籤列">
+        📊 ERP 機位報告（拖曳備用）
+      </a>
+    </div>
+
+    <div style="margin-top:20px">
+      <div style="font-size:13px;font-weight:700;color:#555;margin-bottom:12px;">
+        複製後，依下列步驟手動新增書籤：
+      </div>
+      <div class="install-steps">
+        <div class="num">1</div>
+        <div class="txt">按 <code>Ctrl+Shift+B</code> 顯示書籤列（已顯示可跳過）</div>
+        <div class="num">2</div>
+        <div class="txt">在書籤列空白處<strong>按右鍵</strong> → 選「<strong>新增書籤...</strong>」</div>
+        <div class="num">3</div>
+        <div class="txt">名稱填：<code>ERP 機位報告</code></div>
+        <div class="num">4</div>
+        <div class="txt">網址欄按 <code>Ctrl+A</code> 全選後，<code>Ctrl+V</code> 貼上</div>
+        <div class="num">5</div>
+        <div class="txt">點「<strong>儲存</strong>」完成</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② 每次使用 -->
+  <div class="card">
+    <h2>🚀 每次使用方式</h2>
+    <ol class="steps">
+      <li>用 Chrome 登入 ERP，開啟 SearchList 頁面（停在第 1 頁）</li>
+      <li>點擊書籤列的「ERP 機位報告」</li>
+      <li>畫面出現深色進度浮層，等待約 20～40 秒（自動翻頁擷取中）</li>
+      <li>完成後自動開新分頁顯示報告，或下載 .html 報告檔</li>
+    </ol>
+  </div>
+
+  <!-- ③ 報告說明 -->
+  <div class="card">
+    <h2>📋 報告說明</h2>
+    <div class="legend">
+      <div class="legend-item warn">
+        <div class="legend-icon">⚠️</div>
+        <div class="legend-text">
+          <strong>特別警示：即將成團但無現成機位</strong>
+          <span>HK＋KK &gt; 10，且團控備註含「＊」符號，代表此團沒有現成機位，需要立即處理。</span>
+        </div>
+      </div>
+      <div class="legend-item ok">
+        <div class="legend-icon">📋</div>
+        <div class="legend-text">
+          <strong>即將成團（HK＋KK &gt; 10）</strong>
+          <span>確認＋出票人數超過 10 人，判斷為即將成團。含「＊」者紅底高亮顯示。依 HK＋KK 由大到小排序。</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">ERP 機位擷取器　僅限在 ERP SearchList 頁面使用</div>
+
+
+<!-- ============================================================
+     書籤腳本（type="text/plain"，不執行，由 JS 讀取）
+     ============================================================ -->
+<script type="text/plain" id="bm-code">
+(async function () {
+  if (window.__erpCapturing) { alert('擷取中，請稍候...'); return; }
+
+  var pageSelect = document.querySelector('select[id="PageIndex"]');
+  if (!pageSelect) {
+    alert('❌ 請在 ERP SearchList 頁面（有頁碼下拉選單的頁面）使用此書籤');
+    return;
+  }
+  window.__erpCapturing = true;
+
+  // ── 進度浮層（立即加入，讓使用者看到有在動） ─────────────────
+  var overlay = document.createElement('div');
+  overlay.id = '__erp_ov';
+  overlay.style.cssText = [
+    'position:fixed;inset:0;background:rgba(0,0,0,.72);',
+    'z-index:2147483647;display:flex;align-items:center;justify-content:center;',
+    'font-family:Segoe UI,system-ui,sans-serif;'
+  ].join('');
+  overlay.innerHTML = [
+    '<div style="background:#fff;border-radius:16px;padding:36px 48px;',
+    'text-align:center;min-width:340px;box-shadow:0 24px 64px rgba(0,0,0,.4);">',
+    '<div style="font-size:22px;font-weight:700;margin-bottom:8px;">✈️ 擷取機位資料中</div>',
+    '<div id="__erp_p" style="color:#666;font-size:14px;margin-bottom:20px;">初始化...</div>',
+    '<div id="__erp_c" style="font-size:40px;font-weight:800;color:#1a73e8;letter-spacing:-1px;">0 筆</div>',
+    '<div style="background:#eee;height:8px;border-radius:4px;margin-top:20px;overflow:hidden;">',
+    '<div id="__erp_b" style="height:8px;background:linear-gradient(90deg,#1a73e8,#0d47a1);',
+    'border-radius:4px;width:0%;transition:width .5s ease;"></div>',
+    '</div>',
+    '<div style="margin-top:12px;font-size:12px;color:#bbb;">請勿關閉或切換頁面</div>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(overlay);
+
+  function upd(msg, cur, tot) {
+    var ep = document.getElementById('__erp_p');
+    var ec = document.getElementById('__erp_c');
+    var eb = document.getElementById('__erp_b');
+    if (ep) ep.textContent = msg;
+    if (ec) ec.textContent = cur + ' 筆';
+    if (eb) eb.style.width = (tot > 0 ? Math.min(cur / tot * 100, 99) : 0) + '%';
+  }
+
+  // ── 嘗試預開報告視窗（在第一個 await 前，屬於 user gesture 範圍） ──
+  var reportWin = null;
+  try {
+    reportWin = window.open('', 'erp_report');
+    if (reportWin) {
+      reportWin.document.write(
+        '<html><body style="font-family:Segoe UI,sans-serif;display:flex;' +
+        'align-items:center;justify-content:center;min-height:100vh;' +
+        'margin:0;background:#f0f2f5;">' +
+        '<div style="text-align:center;color:#888;">' +
+        '<div style="font-size:48px;margin-bottom:16px;">✈️</div>' +
+        '<div style="font-size:18px;font-weight:700;margin-bottom:8px;">資料擷取中，請稍候...</div>' +
+        '<div style="font-size:14px;">擷取完成後本頁自動更新</div>' +
+        '</div></body></html>'
+      );
+    }
+  } catch (e) { reportWin = null; }
+
+  // ── 設定 ──────────────────────────────────────────────────────
+  var IDX = {
+    groupNo: 2, airline: 3, remark: 10, totalSeats: 11,
+    hl: 13, hk: 16, kk: 17, reserved: 18, available: 19, join: 20
+  };
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+  function isValidGrp(t) {
+    return /^\d{2}[A-Z]{2}[A-Z\d]{3}[A-Z]{2}/.test(t);
+  }
+
+  function extractRows(doc) {
+    var tables = Array.prototype.slice.call(doc.querySelectorAll('table'));
+    var best = tables.reduce(function (b, t) {
+      var n = t.querySelectorAll(':scope > tbody > tr').length;
+      return n > (b ? b.count : 0) ? { t: t, count: n } : b;
+    }, null);
+    if (!best) return [];
+
+    var result = [];
+    var trs = best.t.querySelectorAll(':scope > tbody > tr');
+    for (var ri = 0; ri < trs.length; ri++) {
+      var cells = Array.prototype.slice.call(trs[ri].querySelectorAll(':scope > td'));
+      if (cells.length < 20) continue;
+      var txt = function (i) {
+        return (cells[i] ? cells[i].textContent : '').replace(/\n/g, ' ').trim();
+      };
+      var num = function (i) {
+        var n = parseInt(
+          (cells[i] ? cells[i].textContent : '').replace(/,/g, '').trim(), 10);
+        return isNaN(n) ? 0 : n;
+      };
+      var grp = (cells[IDX.groupNo] ? cells[IDX.groupNo].textContent : '')
+                  .trim().split('\n')[0].trim();
+      if (!isValidGrp(grp)) continue;
+      result.push({
+        groupNo:    grp,     airline:    txt(IDX.airline),
+        remark:     txt(IDX.remark),    totalSeats: num(IDX.totalSeats),
+        hl:         num(IDX.hl),        hk:         num(IDX.hk),
+        kk:         num(IDX.kk),        reserved:   num(IDX.reserved),
+        available:  num(IDX.available), join:       num(IDX.join)
+      });
+    }
+    return result;
+  }
+
+  async function fetchPage(pageIndex, prevDoc) {
+    var form = document.querySelector('form#SearchListForm');
+    if (!form) throw new Error('找不到 SearchListForm');
+    var fd = new FormData(form);
+    if (prevDoc) {
+      var hids = prevDoc.querySelectorAll('input[type="hidden"]');
+      for (var hi = 0; hi < hids.length; hi++) {
+        if (hids[hi].name) fd.set(hids[hi].name, hids[hi].value);
+      }
+    }
+    fd.set('PageIndex', String(pageIndex));
+    var res = await fetch(form.action, { method: 'POST', body: fd, credentials: 'include' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.text();
+  }
+
+  // ── 擷取迴圈 ──────────────────────────────────────────────────
+  var totalPages = pageSelect.querySelectorAll('option').length;
+  var startPage  = parseInt(pageSelect.value, 10);
+  var allRows    = [];
+  var parser     = new DOMParser();
+  var prevDoc    = null;
+  var estTotal   = totalPages * 95;
+
+  upd('第 ' + startPage + ' / ' + totalPages + ' 頁', 0, estTotal);
+  var firstRows = extractRows(document);
+  allRows = allRows.concat(firstRows);
+  upd('第 ' + startPage + ' / ' + totalPages + ' 頁（' + firstRows.length + ' 筆）',
+      allRows.length, estTotal);
+
+  for (var page = startPage + 1; page <= totalPages; page++) {
+    await sleep(800 + Math.random() * 700);
+    try {
+      upd('第 ' + page + ' / ' + totalPages + ' 頁', allRows.length, estTotal);
+      var html = await fetchPage(page, prevDoc);
+      var doc  = parser.parseFromString(html, 'text/html');
+      prevDoc  = doc;
+      var pr   = extractRows(doc);
+      allRows  = allRows.concat(pr);
+      upd('第 ' + page + ' / ' + totalPages + ' 頁（' + pr.length + ' 筆）',
+          allRows.length, estTotal);
+    } catch (e) {
+      console.error('[ERP] page ' + page + ' failed:', e);
+      break;
+    }
+  }
+
+  // ── 移除浮層 ──────────────────────────────────────────────────
+  var ov = document.getElementById('__erp_ov');
+  if (ov) ov.parentNode.removeChild(ov);
+  window.__erpCapturing = false;
+
+  // ── 輸出報告 ──────────────────────────────────────────────────
+  var reportHTML = buildReport(allRows);
+
+  if (reportWin && !reportWin.closed) {
+    try {
+      reportWin.document.open();
+      reportWin.document.write(reportHTML);
+      reportWin.document.close();
+      reportWin.focus();
+    } catch (e) { downloadReport(reportHTML); }
+  } else {
+    downloadReport(reportHTML);
+  }
+
+  function downloadReport(html) {
+    var blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'erp-report-' + new Date().toISOString().slice(0, 10) + '.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // ── 報告 HTML 產生器 ──────────────────────────────────────────
+  function buildReport(rows) {
+    var now = new Date().toLocaleString('zh-TW', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+    });
+
+    function hasAst(r) {
+      return r.remark.indexOf('＊') >= 0 || r.remark.indexOf('*') >= 0;
+    }
+
+    var forming   = rows.filter(function (r) { return (r.hk + r.kk) > 10; });
+    var noSeats   = forming.filter(hasAst);
+    var byAirline = {};
+    rows.forEach(function (r) {
+      byAirline[r.airline] = (byAirline[r.airline] || 0) + 1;
+    });
+
+    var css = [
+      '* { box-sizing: border-box; margin: 0; padding: 0; }',
+      'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }',
+      'header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 24px 32px; }',
+      'header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }',
+      '.meta { font-size: 13px; color: rgba(255,255,255,.6); }',
+      '.stats { display: flex; flex-wrap: wrap; background: white; border-bottom: 1px solid #e8eaed; }',
+      '.stat { flex: 1; min-width: 80px; text-align: center; padding: 16px 8px; border-right: 1px solid #e8eaed; }',
+      '.stat:last-child { border-right: none; }',
+      '.sn { font-size: 28px; font-weight: 800; line-height: 1; }',
+      '.sl { font-size: 11px; color: #888; margin-top: 4px; }',
+      'section { margin: 24px; }',
+      '.sh { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-left: 14px; }',
+      '.sh h2 { font-size: 17px; font-weight: 700; }',
+      '.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 700; color: white; }',
+      '.empty { background: white; border-radius: 8px; padding: 28px; text-align: center; color: #aaa; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }',
+      'table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.1); font-size: 13px; }',
+      'thead th { background: #2c3e50; color: white; padding: 11px 12px; text-align: left; font-weight: 500; white-space: nowrap; }',
+      'tbody td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }',
+      'tbody tr:last-child td { border-bottom: none; }',
+      'tbody tr:hover td { background: #f8f9fa; }',
+      'tbody tr.w td { background: #fff3f3; }',
+      'tbody tr.w:hover td { background: #ffe8e8; }',
+      '.al { display: inline-block; padding: 2px 8px; border-radius: 5px; font-weight: 700; font-size: 12px; }',
+      '.alBR { background: #e8f4ff; color: #1558d6; }',
+      '.alCI { background: #fce8e6; color: #c62828; }',
+      '.alJX { background: #e8f5e9; color: #2e7d32; }',
+      '.rm { max-width: 280px; color: #555; word-break: break-all; line-height: 1.4; }',
+      '.ast { color: #e53935; font-weight: 900; font-size: 15px; }',
+      '.hkk { font-weight: 700; }',
+      '.hi  { color: #e53935; font-weight: 800; }'
+    ].join(' ');
+
+    function mkRow(r) {
+      var warn = hasAst(r);
+      var hkk  = r.hk + r.kk;
+      var rmk  = r.remark.replace(/[＊*]/g, '<span class="ast">＊</span>');
+      return '<tr class="' + (warn ? 'w' : '') + '">' +
+        '<td style="font-family:monospace;white-space:nowrap">' + r.groupNo.split(' ')[0] + '</td>' +
+        '<td><span class="al al' + r.airline + '">' + r.airline + '</span></td>' +
+        '<td class="rm">' + rmk + '</td>' +
+        '<td style="text-align:center">' + r.totalSeats + '</td>' +
+        '<td style="text-align:center">' + r.hk + '</td>' +
+        '<td style="text-align:center">' + r.kk + '</td>' +
+        '<td style="text-align:center" class="hkk' + (hkk >= 30 ? ' hi' : '') + '">' + hkk + '</td>' +
+        '<td style="text-align:center">' + r.available + '</td>' +
+        '</tr>';
+    }
+
+    function mkTable(list) {
+      if (list.length === 0) return '<div class="empty">目前無符合條件的團體 ✓</div>';
+      var sorted = list.slice().sort(function (a, b) { return (b.hk + b.kk) - (a.hk + a.kk); });
+      return '<table>' +
+        '<thead><tr><th>團號</th><th>航空</th><th>團控說明</th>' +
+        '<th>團位</th><th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th>' +
+        '</tr></thead><tbody>' + sorted.map(mkRow).join('') + '</tbody></table>';
+    }
+
+    function mkSection(title, color, list) {
+      return '<section>' +
+        '<div class="sh" style="border-left:4px solid ' + color + ';color:' + color + '">' +
+        '<h2>' + title + '</h2>' +
+        '<span class="badge" style="background:' + color + '">' + list.length + '</span>' +
+        '</div>' + mkTable(list) + '</section>';
+    }
+
+    var statItems = [
+      { n: rows.length,           l: '總團數',       c: '#1a1a2e' },
+      { n: byAirline['BR'] || 0, l: 'BR 長榮',      c: '#1558d6' },
+      { n: byAirline['CI'] || 0, l: 'CI 華航',      c: '#c62828' },
+      { n: byAirline['JX'] || 0, l: 'JX 捷星',      c: '#2e7d32' },
+      { n: noSeats.length,        l: '⚠ 無現成機位', c: '#e53935' },
+      { n: forming.length,        l: '即將成團',      c: '#2e7d32' }
+    ];
+    var statsHtml = statItems.map(function (s) {
+      return '<div class="stat"><div class="sn" style="color:' + s.c + '">' + s.n +
+             '</div><div class="sl">' + s.l + '</div></div>';
+    }).join('');
+
+    return '<!DOCTYPE html><html lang="zh-TW"><head>' +
+      '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
+      '<title>ERP 機位報告 ' + now.slice(0, 10) + '</title>' +
+      '<style>' + css + '</style></head><body>' +
+      '<header><h1>✈️ ERP 機位狀態報告</h1>' +
+      '<div class="meta">擷取時間：' + now + '　共 ' + rows.length + ' 筆資料</div></header>' +
+      '<div class="stats">' + statsHtml + '</div>' +
+      mkSection('⚠ 特別警示：即將成團但無現成機位', '#e53935', noSeats) +
+      mkSection('📋 即將成團（HK＋KK > 10）', '#2e7d32', forming) +
+      '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
+      'ERP 機位報告　' + now + '</div></body></html>';
+  }
+
+})()
+</script>
+
+<script>
+  // ── 設定書籤連結 href ──────────────────────────────────────────
+  window.addEventListener('DOMContentLoaded', function () {
+    var codeEl = document.getElementById('bm-code');
+    var link   = document.getElementById('bm-link');
+    if (!codeEl || !link) return;
+    var code = codeEl.textContent.trim();
+    link.href = 'javascript:void(' + code + ')';
+  });
+
+  // ── 複製書籤網址 ───────────────────────────────────────────────
+  function copyBookmarklet() {
+    var link = document.getElementById('bm-link');
+    var url  = link.href;
+
+    if (!url || url === '#' || url.length < 50) {
+      alert('書籤網址尚未就緒，請重新整理頁面後再試');
+      return;
+    }
+
+    // 優先用現代 clipboard API，失敗則用舊版
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showCopied, fallbackCopy.bind(null, url));
+    } else {
+      fallbackCopy(url);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showCopied(); }
+    catch (e) { alert('複製失敗，請手動選取書籤連結後複製'); }
+    document.body.removeChild(ta);
+  }
+
+  function showCopied() {
+    var msg = document.getElementById('copy-msg');
+    if (msg) { msg.style.display = 'block'; }
+    var btn = document.getElementById('copy-btn');
+    if (btn) { btn.textContent = '✓ 已複製'; btn.style.background = '#16a34a'; }
+  }
+</script>
+
+</body>
+</html>
