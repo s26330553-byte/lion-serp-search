@@ -366,6 +366,109 @@
       byAirline[r.airline] = (byAirline[r.airline] || 0) + 1;
     });
 
+    // ── 月份 HK/KK 加總（跨次查詢比對用） ───────────────────────
+    function getMonthlyTotals(rs) {
+      var mo = {};
+      rs.forEach(function (r) {
+        var gn = r.groupNo.split(' ')[0];
+        if (gn.length < 7) return;
+        var mc = gn[4];
+        var m;
+        if (mc >= '1' && mc <= '9') m = parseInt(mc, 10);
+        else if (mc === 'O') m = 10;
+        else if (mc === 'N') m = 11;
+        else if (mc === 'D') m = 12;
+        else return;
+        if (!mo[m]) mo[m] = { hk: 0, kk: 0 };
+        mo[m].hk += r.hk;
+        mo[m].kk += r.kk;
+      });
+      return mo;
+    }
+
+    var MNAMES = { 1:'1月',2:'2月',3:'3月',4:'4月',5:'5月',6:'6月',
+                   7:'7月',8:'8月',9:'9月',10:'10月',11:'11月',12:'12月' };
+    var LS_KEY = 'erp_last_query';
+
+    // 讀上次查詢
+    var lastQuery = null;
+    try {
+      var _s = localStorage.getItem(LS_KEY);
+      if (_s) lastQuery = JSON.parse(_s);
+    } catch (e) {}
+
+    // 本次月份加總
+    var curMonthly = getMonthlyTotals(rows);
+
+    // 所有月份（本次 ∪ 上次，排序）
+    var _am = {};
+    Object.keys(curMonthly).forEach(function (m) { _am[m] = true; });
+    if (lastQuery && lastQuery.monthly) {
+      Object.keys(lastQuery.monthly).forEach(function (m) { _am[m] = true; });
+    }
+    var sortedMonths = Object.keys(_am).map(Number).sort(function (a, b) { return a - b; });
+
+    // 差距標籤
+    function diffTag(curr, prev) {
+      var d = curr - prev;
+      if (d === 0) return '<span style="color:#bbb;font-size:10px"> (±0)</span>';
+      var color = d > 0 ? '#e53935' : '#2e7d32';
+      var arrow = d > 0 ? '▲' : '▼';
+      return '<span style="color:' + color + ';font-size:10px"> (' + arrow +
+             (d > 0 ? '+' : '') + d + ')</span>';
+    }
+
+    // 組合比對 HTML
+    var compHtml = '';
+    if (sortedMonths.length > 0) {
+      // 上次查詢那列
+      var prevRowHtml = '';
+      if (lastQuery) {
+        var prevCells = sortedMonths.map(function (m) {
+          var p = (lastQuery.monthly && lastQuery.monthly[m]) || { hk: 0, kk: 0 };
+          return '<span style="background:#f8f9fa;border-radius:6px;padding:3px 10px;' +
+                 'font-size:12px;white-space:nowrap">' +
+                 '<b style="color:#666">' + MNAMES[m] + '</b> ' +
+                 'HK&thinsp;<b>' + p.hk + '</b>&ensp;KK&thinsp;<b>' + p.kk + '</b></span>';
+        }).join('');
+        prevRowHtml =
+          '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;' +
+                     'padding:10px 0;border-bottom:1px dashed #e8eaed;">' +
+          '<span style="min-width:230px;font-size:12px;color:#888;font-weight:600;">' +
+            '📅 上次查詢&ensp;' + lastQuery.capturedAt + '</span>' +
+          prevCells + '</div>';
+      }
+
+      // 此次查詢那列
+      var currCells = sortedMonths.map(function (m) {
+        var c = curMonthly[m] || { hk: 0, kk: 0 };
+        var p = (lastQuery && lastQuery.monthly && lastQuery.monthly[m]) || null;
+        return '<span style="background:#e8f0fe;border-radius:6px;padding:3px 10px;' +
+               'font-size:12px;white-space:nowrap">' +
+               '<b style="color:#1a73e8">' + MNAMES[m] + '</b> ' +
+               'HK&thinsp;<b>' + c.hk + '</b>' + (p ? diffTag(c.hk, p.hk) : '') +
+               '&ensp;KK&thinsp;<b>' + c.kk + '</b>' + (p ? diffTag(c.kk, p.kk) : '') +
+               '</span>';
+      }).join('');
+      var currRowHtml =
+        '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 0;">' +
+        '<span style="min-width:230px;font-size:12px;color:#1a1a2e;font-weight:700;">' +
+          '🔍 此次查詢&ensp;' + now + '</span>' +
+        currCells + '</div>';
+
+      compHtml =
+        '<div style="background:white;border-bottom:1px solid #e8eaed;padding:4px 24px 0;">' +
+        prevRowHtml + currRowHtml + '</div>';
+    }
+
+    // 存入 localStorage，供下次查詢比對
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        capturedAt: now,
+        monthly: curMonthly
+      }));
+    } catch (e) {}
+
     var css =
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +
       'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }' +
@@ -558,6 +661,7 @@
         '　共 ' + rows.length + ' 筆資料</div>' +
       '</header>' +
       '<div class="stats">' + statsHtml + '</div>' +
+      compHtml +
       mkSection('⚠ 特別警示：即將成團但無現成機位',
                 '#e53935', noSeats) +
       mkSection('📋 即將成團（HK＋KK > 5）',
