@@ -347,7 +347,7 @@
     // ── 篩選邏輯 ──────────────────────────────────────────────
     // 基礎集合：HK+KK > 5，排除已成團與 TKT 純機票
     var formingAll = rows.filter(function (r) {
-      return (r.hk + r.kk) > 5
+      return (r.hk + r.kk) > 12
         && r.remark.indexOf('成團') < 0
         && r.orderType.indexOf('TKT') < 0;
     });
@@ -664,7 +664,7 @@
       compHtml +
       mkSection('⚠ 特別警示：即將成團但無現成機位',
                 '#e53935', noSeats) +
-      mkSection('📋 即將成團（HK＋KK > 5）',
+      mkSection('📋 即將成團（HK＋KK > 12）',
                 '#f57c00', forming) +
       mkSection('🔔 已成團・可賣不足（可賣 < 5）',
                 '#6a1b9a', tightSeats) +
