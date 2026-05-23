@@ -384,6 +384,7 @@
       if (r.remark.indexOf('成團') < 0) return false;
       if (r.available >= 5) return false;
       if (r.remark.indexOf('NJ') >= 0) return false;
+      if (r.totalSeats >= 38) return false;
       var dep = departureDateObj(r.groupNo);
       return dep && dep > _cutoff;
     });
