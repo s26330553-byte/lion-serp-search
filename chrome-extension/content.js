@@ -385,7 +385,7 @@
       if (r.available >= 5) return false;
       if (r.remark.indexOf('NJ') >= 0) return false;
       var dep = departureDateObj(r.groupNo);
-      return dep && dep >= _today && dep <= _cutoff;
+      return dep && dep > _cutoff;
     });
     var byAirline = {};
     rows.forEach(function (r) {
@@ -784,7 +784,7 @@
                 '#e53935', noSeats) +
       mkSection('📋 即將成團（HK＋KK > 10）',
                 '#f57c00', forming) +
-      mkSection('🔔 已成團・可賣不足（可賣 < 5，今後14天內出發）',
+      mkSection('🔔 已成團・可賣不足（可賣 < 5，14天後以上出發）',
                 '#6a1b9a', tightSeats) +
       mkSummaryMsg() +
       colDetectHtml +
