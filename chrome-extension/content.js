@@ -531,12 +531,20 @@
         return 'CI130';
       }
       if (al === 'JX') {
-        if (tn.indexOf('函千') >= 0) return 'JX860 函千';
-        if (tn.indexOf('函函') >= 0) return 'JX860 函函';
-        if (tn.indexOf('千函') >= 0) return 'JX850 千函';
+        if (tn.indexOf('函千') >= 0 || tn.indexOf('函函') >= 0) return 'JX860';
         return 'JX850';
       }
       return al;
+    }
+
+    // JX 路線備註（函千 / 函函 / 千函），顯示在每行尾端
+    function getRouteNote(r) {
+      if (r.airline !== 'JX') return '';
+      var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
+      if (tn.indexOf('函千') >= 0) return '函千';
+      if (tn.indexOf('函函') >= 0) return '函函';
+      if (tn.indexOf('千函') >= 0) return '千函';
+      return '';
     }
 
     var css =
@@ -654,8 +662,9 @@
           lines.push('');
           lines.push(f);
           sortRows(noByF[f]).forEach(function (r) {
-            var dayStr = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
-            lines.push(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr);
+            var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
+            lines.push(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr + routeStr);
           });
         });
       }
@@ -667,8 +676,9 @@
           lines.push('');
           lines.push(f);
           sortRows(tgByF[f]).forEach(function (r) {
-            var dayStr = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
-            lines.push(fmtDepDate(r.groupNo) + ' ++散位' + dayStr);
+            var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
+            lines.push(fmtDepDate(r.groupNo) + ' ++散位' + dayStr + routeStr);
           });
         });
       }
