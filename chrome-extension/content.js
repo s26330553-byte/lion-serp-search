@@ -347,17 +347,23 @@
     }
 
     // ── 篩選邏輯 ──────────────────────────────────────────────
-    // 基礎集合：HK+KK > 5，排除已成團與 TKT 純機票
+    // 特別警示：備註含全形＊（無現成機位），不論即將成團或已成團
+    // 條件：有＊ AND（HK+KK > 10 OR 備註含「成團」）AND 排除 NJ / TKT
+    var noSeats = rows.filter(function (r) {
+      if (!hasAst(r)) return false;
+      if (r.orderType.indexOf('TKT') >= 0) return false;
+      if (r.remark.indexOf('NJ') >= 0) return false;
+      return (r.hk + r.kk) > 10 || r.remark.indexOf('成團') >= 0;
+    });
+
+    // 即將成團：HK+KK > 10，排除已成團、NJ、TKT、以及已在特別警示的（避免重複）
     var formingAll = rows.filter(function (r) {
       return (r.hk + r.kk) > 10
         && r.remark.indexOf('成團') < 0
         && r.remark.indexOf('NJ') < 0
         && r.orderType.indexOf('TKT') < 0;
     });
-    // 特別警示：無現成機位（備註含全形＊）
-    var noSeats  = formingAll.filter(hasAst);
-    // 即將成團：排除已在特別警示的，避免重複顯示
-    var forming  = formingAll.filter(function (r) { return !hasAst(r); });
+    var forming = formingAll.filter(function (r) { return !hasAst(r); });
     // ── 出發日期工具 ──────────────────────────────────────────
     function departureDateObj(groupNo) {
       var gn = groupNo.split(' ')[0];
@@ -796,7 +802,7 @@
       '</header>' +
       '<div class="stats">' + statsHtml + '</div>' +
       compHtml +
-      mkSection('⚠ 特別警示：即將成團但無現成機位',
+      mkSection('⚠ 特別警示：即將成團或是已成團但無現成機位',
                 '#e53935', noSeats) +
       mkSection('📋 即將成團（HK＋KK > 10）',
                 '#f57c00', forming) +
