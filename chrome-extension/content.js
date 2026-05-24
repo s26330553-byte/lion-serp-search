@@ -542,7 +542,6 @@
       if (r.airline !== 'JX') return '';
       var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
       if (tn.indexOf('函千') >= 0) return '函千';
-      if (tn.indexOf('函函') >= 0) return '函函';
       if (tn.indexOf('千函') >= 0) return '千函';
       return '';
     }
