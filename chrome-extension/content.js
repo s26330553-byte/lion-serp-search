@@ -789,13 +789,13 @@
         copyLines.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
         '</pre>' +
         // 欄標題列
-        '<div style="display:grid;grid-template-columns:1fr 210px;' +
+        '<div style="display:grid;grid-template-columns:auto 210px;' +
              'font-size:11px;color:#bbb;margin-bottom:4px;padding:0 2px;">' +
         '<div>訊息內容（複製鈕只帶這欄）</div>' +
         '<div style="padding-left:12px;">備註（不含入複製）</div>' +
         '</div>' +
         // 格線主體
-        '<div style="display:grid;grid-template-columns:1fr 210px;font-size:14px;">' +
+        '<div style="display:grid;grid-template-columns:auto 210px;font-size:14px;">' +
         gridHtml +
         '</div>' +
         // 提示
