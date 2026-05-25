@@ -656,42 +656,119 @@
           return departureSortKey(a.groupNo) - departureSortKey(b.groupNo);
         });
       }
+      // HTML 跳脫（含雙引號，用於 HTML 屬性值）
+      function he(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      }
 
-      var lines = [];
       var noByF = groupByFlight(noSeats);
       var tgByF = groupByFlight(tightSeats);
 
+      // ── 純文字（隱藏 pre，複製鈕來源）────────────────────────────
+      var copyLines = [];
       if (sortedFlights(noByF).length) {
-        lines.push('即將成團但無現成機位');
+        copyLines.push('即將成團但無現成機位');
         sortedFlights(noByF).forEach(function (f) {
-          lines.push('');
-          lines.push(f);
+          copyLines.push('');
+          copyLines.push(f);
           sortRows(noByF[f]).forEach(function (r) {
             var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
             var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
-            lines.push(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr + routeStr);
+            copyLines.push(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr + routeStr);
           });
         });
       }
-
       if (sortedFlights(tgByF).length) {
-        if (lines.length) lines.push('');
-        lines.push('已成團可賣不足');
+        if (copyLines.length) copyLines.push('');
+        copyLines.push('已成團可賣不足');
         sortedFlights(tgByF).forEach(function (f) {
-          lines.push('');
-          lines.push(f);
+          copyLines.push('');
+          copyLines.push(f);
           sortRows(tgByF[f]).forEach(function (r) {
             var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
             var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
-            lines.push(fmtDepDate(r.groupNo) + ' ++散位' + dayStr + routeStr);
+            copyLines.push(fmtDepDate(r.groupNo) + ' ++散位' + dayStr + routeStr);
           });
         });
       }
 
-      if (!lines.length) return '';
+      if (!copyLines.length) return '';
 
-      var text = lines.join('\n');
-      var escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      // ── 格線 HTML（左欄文字 + 右欄備註輸入）─────────────────────
+      var gridHtml = '';
+      var needDivider = false;
+
+      function addSec(label) {
+        gridHtml += '<div style="font-weight:700;color:#333;padding:2px 0;line-height:2">' +
+                    he(label) + '</div><div></div>';
+      }
+      function addFlt(label) {
+        gridHtml += '<div style="font-weight:600;color:#1565c0;padding:1px 0;line-height:2">' +
+                    he(label) + '</div><div></div>';
+      }
+      function addSpacer() {
+        gridHtml += '<div style="grid-column:1/3;height:4px"></div>';
+      }
+      function addDivider() {
+        gridHtml += '<div style="grid-column:1/3;height:1px;background:#f0f0f0;margin:8px 0"></div>';
+      }
+      function addDataRow(text, gno) {
+        var saved = '';
+        try { saved = localStorage.getItem('erp_note_' + gno) || ''; } catch (e) {}
+        var hasSaved = saved.length > 0;
+        var inpStyle =
+          'width:100%;box-sizing:border-box;border:1px solid ' +
+          (hasSaved ? '#ffc107' : '#ddd') + ';border-radius:6px;padding:3px 10px;' +
+          'font-size:13px;color:#444;background:' + (hasSaved ? '#fff8e1' : '#fafafa') + ';' +
+          'font-family:inherit;outline:none;';
+        gridHtml +=
+          '<div style="padding:1px 0;line-height:2;color:#333">' + he(text) + '</div>' +
+          '<div style="padding:1px 0 1px 12px;display:flex;align-items:center">' +
+          '<input class="__erp_note" data-gno="' + he(gno) + '" value="' + he(saved) + '" ' +
+          'placeholder="備註…" style="' + inpStyle + '"></div>';
+      }
+
+      if (sortedFlights(noByF).length) {
+        addSec('即將成團但無現成機位');
+        sortedFlights(noByF).forEach(function (f) {
+          addSpacer();
+          addFlt(f);
+          sortRows(noByF[f]).forEach(function (r) {
+            var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
+            addDataRow(fmtDepDate(r.groupNo) + ' 需求一組' + dayStr + routeStr, r.groupNo);
+          });
+        });
+        needDivider = true;
+      }
+      if (sortedFlights(tgByF).length) {
+        if (needDivider) addDivider();
+        addSec('已成團可賣不足');
+        sortedFlights(tgByF).forEach(function (f) {
+          addSpacer();
+          addFlt(f);
+          sortRows(tgByF[f]).forEach(function (r) {
+            var dayStr   = (r.days && r.days !== 5) ? ' ' + r.days + '天' : '';
+            var routeStr = getRouteNote(r) ? ' ' + getRouteNote(r) : '';
+            addDataRow(fmtDepDate(r.groupNo) + ' ++散位' + dayStr + routeStr, r.groupNo);
+          });
+        });
+      }
+
+      // ── 儲存按鈕的 onclick（單引號 JS 放在雙引號 HTML 屬性裡）──
+      var saveFn =
+        '(function(){' +
+          'document.querySelectorAll(\'.__erp_note\').forEach(function(i){' +
+            'var v=i.value.trim();' +
+            'if(v){localStorage.setItem(\'erp_note_\'+i.dataset.gno,v);}' +
+            'else{localStorage.removeItem(\'erp_note_\'+i.dataset.gno);}' +
+            'i.style.background=v?\'#fff8e1\':\'#fafafa\';' +
+            'i.style.borderColor=v?\'#ffc107\':\'#ddd\';' +
+          '});' +
+          'var ok=document.getElementById(\'__erp_save_ok\');' +
+          'if(ok){ok.style.opacity=\'1\';setTimeout(function(){ok.style.opacity=\'0\';},2200);}' +
+        '})()';
 
       return '<section>' +
         '<div class="sh" style="border-left:4px solid #37474f;color:#37474f">' +
@@ -700,15 +777,40 @@
         '</div>' +
         '<div style="position:relative;background:white;border-radius:10px;' +
              'box-shadow:0 1px 4px rgba(0,0,0,.1);padding:20px 24px 20px 20px;">' +
+        // 複製鈕（讀隱藏 pre，不含備註欄）
         '<button id="__cp_btn" onclick="(function(b){' +
-          'navigator.clipboard.writeText(b.parentNode.querySelector(\'pre\').textContent)' +
-          '.then(function(){b.textContent=\'✓ 已複製\';setTimeout(function(){b.textContent=\'複製\'},1800)})' +
-        '})(this)" style="position:absolute;top:12px;right:12px;padding:5px 16px;' +
+          'navigator.clipboard.writeText(document.getElementById(\'__cp_text\').textContent)' +
+          '.then(function(){b.textContent=\'✓ 已複製\';setTimeout(function(){b.textContent=\'複製\';},1800);})' +
+        '})(this)" style="position:absolute;top:14px;right:16px;padding:5px 18px;' +
         'background:#37474f;color:white;border:none;border-radius:6px;cursor:pointer;' +
         'font-size:12px;font-weight:600;">複製</button>' +
-        '<pre style="font-family:Segoe UI,system-ui,sans-serif;font-size:14px;' +
-             'line-height:2;white-space:pre-wrap;margin:0;padding-right:60px;">' +
-        escaped + '</pre></div></section>';
+        // 隱藏 pre（純文字複製來源）
+        '<pre id="__cp_text" style="display:none">' +
+        copyLines.join('\n').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') +
+        '</pre>' +
+        // 欄標題列
+        '<div style="display:grid;grid-template-columns:1fr 210px;' +
+             'font-size:11px;color:#bbb;margin-bottom:4px;padding:0 2px;">' +
+        '<div>訊息內容（複製鈕只帶這欄）</div>' +
+        '<div style="padding-left:12px;">備註（不含入複製）</div>' +
+        '</div>' +
+        // 格線主體
+        '<div style="display:grid;grid-template-columns:1fr 210px;font-size:14px;">' +
+        gridHtml +
+        '</div>' +
+        // 提示
+        '<div style="font-size:11px;color:#ccc;margin-top:6px;">' +
+        '⬆ 左欄為複製內容，右欄備註不會被帶走</div>' +
+        // 儲存列
+        '<div style="margin-top:12px;border-top:1px solid #f0f0f0;padding-top:12px;' +
+             'display:flex;align-items:center;justify-content:flex-end;gap:10px;">' +
+        '<span id="__erp_save_ok" ' +
+             'style="font-size:12px;color:#43a047;opacity:0;transition:opacity .3s;">✓ 已儲存</span>' +
+        '<button onclick="' + saveFn + '" ' +
+        'style="padding:6px 20px;background:#43a047;color:white;border:none;border-radius:6px;' +
+        'cursor:pointer;font-size:13px;font-weight:600;">💾 儲存所有備註</button>' +
+        '</div>' +
+        '</div></section>';
     }
 
     // ── 欄位偵測結果 + 原始欄位診斷（底部可收折）──────────────────
