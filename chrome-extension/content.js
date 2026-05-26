@@ -1,6 +1,24 @@
 // content.js — ERP 機位資料擷取 + HTML 報告產生器（動態欄位偵測版）
 // 由 background.js 注入到 ERP SearchList 頁面執行
 
+// ── 下載中繼：報告視窗（about:blank）透過 postMessage 把 HTML 傳回這裡，
+//    由 ERP 頁（真實 origin）建立 blob URL 觸發下載，避免 about:blank 被擋
+if (!window.__erpDlListenerSet) {
+  window.__erpDlListenerSet = true;
+  window.addEventListener('message', function (e) {
+    if (!e.data || e.data.type !== 'erpDl') return;
+    var blob = new Blob([e.data.html], { type: 'text/html;charset=utf-8' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href     = url;
+    a.download = e.data.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
 (function () {
 
   // ── 防止重複執行 ──────────────────────────────────────────────
@@ -903,13 +921,12 @@
         '　共 ' + rows.length + ' 筆資料</div>' +
       '<button onclick="(function(){' +
         'document.querySelectorAll(\'.__erp_note\').forEach(function(i){i.setAttribute(\'value\',i.value);});' +
-        'var h=document.documentElement.outerHTML;' +
-        'var b=new Blob([h],{type:\'text/html;charset=utf-8\'});' +
-        'var u=URL.createObjectURL(b);' +
-        'var a=document.createElement(\'a\');' +
-        'a.href=u;a.download=\'ERP機位報告_' + now.slice(0,10) + '.html\';' +
-        'document.body.appendChild(a);a.click();' +
-        'document.body.removeChild(a);URL.revokeObjectURL(u);' +
+        'if(window.opener){' +
+          'window.opener.postMessage({type:\'erpDl\',' +
+            'html:document.documentElement.outerHTML,' +
+            'name:\'ERP機位報告_' + now.slice(0,10) + '.html\'' +
+          '},\'*\');' +
+        '}' +
       '})()" style="position:absolute;top:24px;right:32px;padding:7px 20px;' +
       'background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);' +
       'border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;' +
