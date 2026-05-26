@@ -902,6 +902,7 @@
       '<div class="meta">擷取時間：' + now +
         '　共 ' + rows.length + ' 筆資料</div>' +
       '<button onclick="(function(){' +
+        'document.querySelectorAll(\'.__erp_note\').forEach(function(i){i.setAttribute(\'value\',i.value);});' +
         'var h=document.documentElement.outerHTML;' +
         'var b=new Blob([h],{type:\'text/html;charset=utf-8\'});' +
         'var u=URL.createObjectURL(b);' +
