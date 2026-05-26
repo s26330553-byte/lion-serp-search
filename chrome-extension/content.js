@@ -555,7 +555,7 @@
     var css =
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +
       'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }' +
-      'header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 24px 32px; }' +
+      'header { background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; padding: 24px 32px; position: relative; }' +
       'header h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }' +
       '.meta { font-size: 13px; color: rgba(255,255,255,.6); }' +
       '.stats { display: flex; flex-wrap: wrap; background: white; border-bottom: 1px solid #e8eaed; }' +
@@ -901,6 +901,18 @@
       '<h1>✈️ ERP 機位狀態報告</h1>' +
       '<div class="meta">擷取時間：' + now +
         '　共 ' + rows.length + ' 筆資料</div>' +
+      '<button onclick="(function(){' +
+        'var h=document.documentElement.outerHTML;' +
+        'var b=new Blob([h],{type:\'text/html;charset=utf-8\'});' +
+        'var u=URL.createObjectURL(b);' +
+        'var a=document.createElement(\'a\');' +
+        'a.href=u;a.download=\'ERP機位報告_' + now.slice(0,10) + '.html\';' +
+        'document.body.appendChild(a);a.click();' +
+        'document.body.removeChild(a);URL.revokeObjectURL(u);' +
+      '})()" style="position:absolute;top:24px;right:32px;padding:7px 20px;' +
+      'background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);' +
+      'border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;' +
+      'backdrop-filter:blur(4px);">⬇ 下載 HTML</button>' +
       '</header>' +
       '<div class="stats">' + statsHtml + '</div>' +
       compHtml +
