@@ -581,8 +581,13 @@ if (!window.__erpDlListenerSet) {
       '.stat:last-child { border-right: none; }' +
       '.sn { font-size: 28px; font-weight: 800; line-height: 1; }' +
       '.sl { font-size: 11px; color: #888; margin-top: 4px; }' +
-      'section { margin: 24px; }' +
-      '.sh { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding-left: 14px; }' +
+      '.sec-details { margin: 24px; }' +
+      '.sh { display: flex; align-items: center; gap: 10px; padding-left: 14px; }' +
+      '.sec-details > summary { list-style: none; cursor: pointer; user-select: none; padding: 4px 0; }' +
+      '.sec-details > summary::-webkit-details-marker { display: none; }' +
+      '.sec-details[open] > summary .sh { margin-bottom: 12px; }' +
+      '.sec-toggle { margin-left: auto; padding-right: 4px; font-size: 12px; color: #aaa; display: inline-block; transition: transform .2s; }' +
+      '.sec-details[open] .sec-toggle { transform: rotate(180deg); }' +
       '.sh h2 { font-size: 17px; font-weight: 700; }' +
       '.badge { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 24px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 700; color: white; }' +
       '.empty { background: white; border-radius: 8px; padding: 28px; text-align: center; color: #aaa; font-size: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }' +
@@ -647,12 +652,16 @@ if (!window.__erpDlListenerSet) {
         '<tbody>' + sorted.map(mkRow).join('') + '</tbody></table>';
     }
 
-    function mkSection(title, color, list) {
-      return '<section>' +
+    function mkSection(title, color, list, collapsed) {
+      return '<details class="sec-details"' + (collapsed ? '' : ' open') + '>' +
+        '<summary>' +
         '<div class="sh" style="border-left:4px solid ' + color + ';color:' + color + '">' +
         '<h2>' + title + '</h2>' +
         '<span class="badge" style="background:' + color + '">' + list.length + '</span>' +
-        '</div>' + mkTable(list) + '</section>';
+        '<span class="sec-toggle">▼</span>' +
+        '</div></summary>' +
+        mkTable(list) +
+        '</details>';
     }
 
     // ── 機位需求簡訊（可直接複製貼到 LINE） ──────────────────────
@@ -788,11 +797,13 @@ if (!window.__erpDlListenerSet) {
           'if(ok){ok.style.opacity=\'1\';setTimeout(function(){ok.style.opacity=\'0\';},2200);}' +
         '})()';
 
-      return '<section>' +
+      return '<details class="sec-details" open>' +
+        '<summary>' +
         '<div class="sh" style="border-left:4px solid #37474f;color:#37474f">' +
         '<h2>📨 機位需求簡訊</h2>' +
         '<span style="font-size:12px;color:#888;margin-left:4px;">可直接複製貼至 LINE</span>' +
-        '</div>' +
+        '<span class="sec-toggle">▼</span>' +
+        '</div></summary>' +
         '<div style="position:relative;background:white;border-radius:10px;' +
              'box-shadow:0 1px 4px rgba(0,0,0,.1);padding:20px 24px 20px 20px;">' +
         // 複製鈕（讀隱藏 pre，不含備註欄）
@@ -828,7 +839,7 @@ if (!window.__erpDlListenerSet) {
         'style="padding:6px 20px;background:#43a047;color:white;border:none;border-radius:6px;' +
         'cursor:pointer;font-size:13px;font-weight:600;">💾 儲存所有備註</button>' +
         '</div>' +
-        '</div></section>';
+        '</div></details>';
     }
 
     // ── 欄位偵測結果 + 原始欄位診斷（底部可收折）──────────────────
@@ -939,7 +950,7 @@ if (!window.__erpDlListenerSet) {
       mkSection('📋 即將成團（HK＋KK > 10）',
                 '#f57c00', forming) +
       mkSection('🔔 已成團・可賣不足（可賣 < 5，14天後以上出發）',
-                '#6a1b9a', tightSeats) +
+                '#6a1b9a', tightSeats, true) +
       mkSummaryMsg() +
       colDetectHtml +
       '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
