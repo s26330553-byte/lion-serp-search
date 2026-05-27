@@ -414,6 +414,16 @@ if (!window.__erpDlListenerSet) {
       var dep = departureDateObj(r.groupNo);
       return dep && dep > _cutoff;
     });
+    // 超賣：可賣 <= -1
+    var overSold = rows.filter(function (r) {
+      return r.available <= -1;
+    });
+
+    // 保留太多：保留 > 0 且 可賣 <= 6
+    var tooReserved = rows.filter(function (r) {
+      return r.reserved > 0 && r.available <= 6;
+    });
+
     var byAirline = {};
     rows.forEach(function (r) {
       byAirline[r.airline] = (byAirline[r.airline] || 0) + 1;
@@ -914,7 +924,9 @@ if (!window.__erpDlListenerSet) {
       { n: byAirline['JX'] || 0,   l: 'JX 星宇',       c: '#2e7d32' },
       { n: noSeats.length,         l: '⚠ 無現成機位',  c: '#e53935' },
       { n: forming.length,         l: '即將成團',       c: '#f57c00' },
-      { n: tightSeats.length,      l: '成團・可賣不足', c: '#6a1b9a' }
+      { n: tightSeats.length,      l: '成團・可賣不足', c: '#6a1b9a' },
+      { n: overSold.length,        l: '🔴 超賣',        c: '#b71c1c' },
+      { n: tooReserved.length,     l: '📌 保留太多',    c: '#0277bd' }
     ];
     var statsHtml = statItems.map(function (s) {
       return '<div class="stat"><div class="sn" style="color:' + s.c + '">' + s.n +
@@ -951,6 +963,10 @@ if (!window.__erpDlListenerSet) {
                 '#f57c00', forming) +
       mkSection('🔔 已成團・可賣不足（可賣 < 5，14天後以上出發）',
                 '#6a1b9a', tightSeats, true) +
+      mkSection('🔴 超賣（可賣 ≤ -1）',
+                '#b71c1c', overSold) +
+      mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
+                '#0277bd', tooReserved) +
       mkSummaryMsg() +
       colDetectHtml +
       '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
