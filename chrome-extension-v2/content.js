@@ -198,6 +198,7 @@ if (!window.__erpDlListenerSet2) {
 
       result.push({
         groupNo:    grp,
+        teamName:   cellTexts[6] || '',   // 標準團名（cells[6]）
         airline:    ct(idx.airline),
         orderType:  cellTexts[4] || '',
         remark:     ct(idx.remark),
@@ -366,8 +367,8 @@ if (!window.__erpDlListenerSet2) {
       var totalColor = total >= 20 ? '#c62828' : '#e65100';
 
       return '<tr>' +
-        '<td style="white-space:nowrap;font-weight:600;">' + he(fmtDepDate(r.groupNo)) + '</td>' +
         '<td style="font-family:monospace;font-size:12px;white-space:nowrap;">' + he(r.groupNo) + '</td>' +
+        '<td>' + he(r.teamName) + '</td>' +
         '<td style="font-weight:700;color:#1558d6;text-align:center;">' + he(r.airline) + '</td>' +
         '<td style="text-align:center;color:#666;">' + (r.days || 5) + '</td>' +
         '<td style="text-align:center;color:#1565c0;font-weight:600;">' + r.hk + '</td>' +
@@ -442,7 +443,7 @@ if (!window.__erpDlListenerSet2) {
       '<div class="container">' +
       '<table>' +
       '<thead><tr>' +
-      '<th>出發日</th><th>團號</th><th>航空</th><th>天</th>' +
+      '<th>團號</th><th>標準團名</th><th>航空</th><th>天</th>' +
       '<th>HK</th><th>KK</th><th>合計</th><th>可賣</th>' +
       '<th style="min-width:240px;">備註（存至本機，下次自動帶入）</th>' +
       '</tr></thead>' +
