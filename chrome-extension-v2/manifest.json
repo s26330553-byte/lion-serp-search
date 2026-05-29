@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "SERP團資料擷取報告 2.0 (手配版)",
+  "version": "1.0",
+  "description": "擷取 ERP SearchList 機位資料，顯示 HK+KK ≥ 15 的團清單（附備註欄）",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://gitberp.liontravel.com/*"
+  ],
+  "action": {
+    "default_title": "SERP 手配版報告"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
