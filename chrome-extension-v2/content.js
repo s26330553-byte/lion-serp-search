@@ -198,7 +198,7 @@ if (!window.__erpDlListenerSet2) {
 
       result.push({
         groupNo:    grp,
-        teamName:   cellTexts[6] || '',   // 標準團名（cells[6]）
+        teamName:   (cellTexts[6] || '').replace(/\s*[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '').trim(),
         airline:    ct(idx.airline),
         orderType:  cellTexts[4] || '',
         remark:     ct(idx.remark),
