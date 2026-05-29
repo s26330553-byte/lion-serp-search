@@ -1,4 +1,4 @@
-// content.js — SERP 手配版 2.0：HK+KK ≥ 15 一覽表（附備註欄）
+// content.js — SERP 手配版 2.0：HK+KK ≥ 13 且 KK ≥ 5 一覽表（附備註欄）
 // 由 background.js 注入到 ERP SearchList 頁面執行
 
 // ── 下載中繼：報告視窗透過 postMessage 傳回 ERP 頁觸發下載 ──
@@ -345,8 +345,8 @@ if (!window.__erpDlListenerSet2) {
         .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ── 篩選 & 排序：HK+KK >= 15 ──────────────────────────────
-    var list = rows.filter(function (r) { return (r.hk + r.kk) >= 15; });
+    // ── 篩選 & 排序：HK+KK >= 13 且 KK >= 5 ──────────────────
+    var list = rows.filter(function (r) { return (r.hk + r.kk) >= 13 && r.kk >= 5; });
     list.sort(function (a, b) {
       return departureSortKey(a.groupNo) - departureSortKey(b.groupNo);
     });
@@ -425,7 +425,7 @@ if (!window.__erpDlListenerSet2) {
 
     // ── 組合 HTML ──────────────────────────────────────────────
     var emptyRow = '<tr><td colspan="9" style="text-align:center;padding:28px;color:#bbb;">' +
-                   '目前沒有 HK+KK ≥ 15 的資料</td></tr>';
+                   '目前沒有符合條件（HK+KK ≥ 13 且 KK ≥ 5）的資料</td></tr>';
 
     return '<!DOCTYPE html><html lang="zh-TW"><head>' +
       '<meta charset="UTF-8">' +
@@ -434,7 +434,7 @@ if (!window.__erpDlListenerSet2) {
       '<style>' + css + '</style></head><body>' +
       '<header>' +
       '<h1>🛫 SERP 團資料擷取報告 2.0（手配版）</h1>' +
-      '<div class="meta">擷取時間：' + now + '　共 ' + list.length + ' 筆（HK+KK ≥ 15）</div>' +
+      '<div class="meta">擷取時間：' + now + '　共 ' + list.length + ' 筆（HK+KK ≥ 13 且 KK ≥ 5）</div>' +
       '<button onclick="' + dlFn + '" ' +
       'style="position:absolute;top:24px;right:32px;padding:7px 20px;' +
       'background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);' +
