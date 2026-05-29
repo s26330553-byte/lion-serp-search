@@ -414,9 +414,14 @@ if (!window.__erpDlListenerSet) {
       var dep = departureDateObj(r.groupNo);
       return dep && dep > _cutoff;
     });
-    // 超賣：可賣 <= -1
+    // 超賣：
+    //   條件一：可賣 <= -1
+    //   條件二：團控備註含半形 *數字（實際機位上限），且 KK 超過該數字
     var overSold = rows.filter(function (r) {
-      return r.available <= -1;
+      if (r.available <= -1) return true;
+      var m = r.remark.match(/\*(\d+)/);
+      if (m && r.kk > parseInt(m[1], 10)) return true;
+      return false;
     });
 
     // 保留太多：保留 > 0 且 可賣 <= 6
@@ -963,7 +968,7 @@ if (!window.__erpDlListenerSet) {
                 '#f57c00', forming) +
       mkSection('🔔 已成團・可賣不足（可賣 < 5，14天後以上出發）',
                 '#6a1b9a', tightSeats, true) +
-      mkSection('🔴 超賣（可賣 ≤ -1）',
+      mkSection('🔴 超賣（可賣 ≤ -1，或 KK 超過備註標示機位數）',
                 '#b71c1c', overSold) +
       mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
                 '#0277bd', tooReserved) +
