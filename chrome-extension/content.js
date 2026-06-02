@@ -375,9 +375,10 @@ if (!window.__erpDlListenerSet) {
       return (r.hk + r.kk) > 10 || r.remark.indexOf('成團') >= 0;
     });
 
-    // 即將成團：HK+KK > 10，排除已成團、NJ、TKT、以及已在特別警示的（避免重複）
+    // 即將成團：HK+KK > 10 且 KK >= 10，排除已成團、NJ、TKT、以及已在特別警示的（避免重複）
     var formingAll = rows.filter(function (r) {
       return (r.hk + r.kk) > 10
+        && r.kk >= 10
         && r.remark.indexOf('成團') < 0
         && r.remark.indexOf('NJ') < 0
         && r.orderType.indexOf('TKT') < 0;
