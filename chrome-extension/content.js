@@ -366,11 +366,12 @@ if (!window.__erpDlListenerSet) {
 
     // ── 篩選邏輯 ──────────────────────────────────────────────
     // 特別警示：備註含全形＊（無現成機位），不論即將成團或已成團
-    // 條件：有＊ AND（HK+KK > 10 OR 備註含「成團」）AND 排除 NJ / TKT
+    // 條件：有＊ AND KK >= 10 AND（HK+KK > 10 OR 備註含「成團」）AND 排除 NJ / TKT
     var noSeats = rows.filter(function (r) {
       if (!hasAst(r)) return false;
       if (r.orderType.indexOf('TKT') >= 0) return false;
       if (r.remark.indexOf('NJ') >= 0) return false;
+      if (r.kk < 10) return false;
       return (r.hk + r.kk) > 10 || r.remark.indexOf('成團') >= 0;
     });
 
