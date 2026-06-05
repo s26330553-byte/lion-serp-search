@@ -393,17 +393,18 @@ if (!window.__erpDlListenerSet3) {
           if (!hasOccupied) {
             inner = '<div style="font-size:12px;text-align:center;'+(isToday?'font-weight:800;text-decoration:underline;':'')+'">'+day+'</div>';
           } else {
-            inner = '<div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;">'+day+(isConflict?' ⚠️':'')+'</div>';
+            inner = '<div style="font-size:14px;font-weight:800;text-align:center;margin-bottom:3px;">'+day+(isConflict?' ⚠️':'')+'</div>';
             entries.forEach(function(e){
               var gno = e.q.row.groupNo.split(' ')[0];
               var canToggle = !!e.q.tour.reversedOffsets;
+              var revLabel = e.q.isReversed ? '&nbsp;<span style="background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;">倒走</span>' : '';
               var gnoHtml = canToggle
                 ? '<span onclick="window.toggleReversed(\''+he(e.q.row.groupNo)+'\')" ' +
-                  'style="font-family:monospace;font-size:8px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);" ' +
+                  'style="font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);" ' +
                   'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>'
-                : '<span style="font-family:monospace;font-size:8px;">'+he(gno)+'</span>';
-              inner += '<div style="font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;">' +
-                he(e.q.tour.shortLabel)+(e.q.isReversed?'🔄':'')+' '+e.nightLabel+'<br>' +
+                : '<span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
+              inner += '<div style="font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;">' +
+                he(e.q.tour.shortLabel)+' '+e.nightLabel+revLabel+'<br>' +
                 gnoHtml + '</div>';
             });
           }
@@ -624,15 +625,16 @@ if (!window.__erpDlListenerSet3) {
             'var inner2;' +
             'if(!hasO){inner2="<div style=\\"font-size:12px;text-align:center;"+(isTod?"font-weight:800;text-decoration:underline;":"")+"\\">" +day+"</div>";}' +
             'else{' +
-              'inner2="<div style=\\"font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;\\">"+day+(isC?" ⚠️":"")+"</div>";' +
+              'inner2="<div style=\\"font-size:14px;font-weight:800;text-align:center;margin-bottom:3px;\\">"+day+(isC?" ⚠️":"")+"</div>";' +
               'entries.forEach(function(e){' +
                 'var gno2=e.q.row.groupNo.split(" ")[0];' +
                 'var canT=!!e.q.tour.reversedOffsets;' +
+                'var rvL=e.q.isReversed?"&nbsp;<span style=\\"background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;\\">倒走</span>":"";' +
                 'var gnoH=canT' +
-                  '?"<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:8px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>"' +
-                  ':"<span style=\\"font-family:monospace;font-size:8px;\\">"+he(gno2)+"</span>";' +
-                'inner2+="<div style=\\"font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;\\">" +' +
-                  'he(e.q.tour.shortLabel)+(e.q.isReversed?"🔄":"")+" "+e.nightLabel+"<br>" +' +
+                  '?"<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>"' +
+                  ':"<span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
+                'inner2+="<div style=\\"font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;\\">" +' +
+                  'he(e.q.tour.shortLabel)+" "+e.nightLabel+rvL+"<br>" +' +
                   'gnoH+"</div>";' +
               '});' +
             '}' +
