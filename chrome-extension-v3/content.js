@@ -404,8 +404,7 @@ if (!window.__erpDlListenerSet3) {
                   'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>'
                 : '<span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
               inner += '<div style="font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;">' +
-                he(e.q.tour.shortLabel)+' '+e.nightLabel+revLabel+'<br>' +
-                gnoHtml + '</div>';
+                he(e.q.tour.shortLabel)+' '+e.nightLabel+revLabel+' '+gnoHtml + '</div>';
             });
           }
           html += '<td title="'+he(cellTitle)+'" style="'+dayStyle+'">'+inner+'</td>';
@@ -634,8 +633,7 @@ if (!window.__erpDlListenerSet3) {
                   '?"<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>"' +
                   ':"<span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
                 'inner2+="<div style=\\"font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;\\">" +' +
-                  'he(e.q.tour.shortLabel)+" "+e.nightLabel+rvL+"<br>" +' +
-                  'gnoH+"</div>";' +
+                  'he(e.q.tour.shortLabel)+" "+e.nightLabel+rvL+" "+gnoH+"</div>";' +
               '});' +
             '}' +
             'html+="<td title=\\""+he(cellTitle)+"\\" style=\\""+ds2+"\\">"+inner2+"</td>";' +
