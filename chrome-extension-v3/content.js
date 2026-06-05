@@ -414,14 +414,13 @@ if (!window.__erpDlListenerSet3) {
               var gno = e.q.row.groupNo.split(' ')[0];
               var ctrlHtml;
               if (e.q.tour.selectableOffsets) {
-                // 特選花戀：下拉選 D1~D5（用 data-gno 避免 this 引號衝突）
-                var selHtml = '<select class="__erp_day_sel" data-gno="'+he(e.q.row.groupNo)+'" ' +
-                  'style="font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;">';
-                for (var si = 0; si < 5; si++) {
-                  selHtml += '<option value="'+si+'"'+(e.q.offsets[0]===si?' selected':'')+'>D'+(si+1)+'</option>';
-                }
-                selHtml += '</select>';
-                ctrlHtml = he(e.q.tour.shortLabel)+' '+selHtml+' <span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
+                // 特選花戀：點擊循環切換 D1~D5（避免 table 裁切 select 下拉）
+                var curOff = e.q.offsets[0];
+                var nextOff = (curOff + 1) % 5;
+                var cycleHtml = '<span onclick="window.cycleDay(\''+he(e.q.row.groupNo)+'\','+curOff+',5)" ' +
+                  'style="background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);border-radius:3px;padding:0 4px;font-size:9px;cursor:pointer;font-weight:700;" ' +
+                  'title="點擊切換天數 → D'+(nextOff+1)+'">'+nightLabel(curOff)+' ▶</span>';
+                ctrlHtml = he(e.q.tour.shortLabel)+' '+cycleHtml+' <span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
               } else {
                 // 限定PLUS：倒走切換
                 var revLabel = e.q.isReversed ? '&nbsp;<span style="background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;">倒走</span>' : '';
@@ -670,10 +669,11 @@ if (!window.__erpDlListenerSet3) {
                 'var gno2=e.q.row.groupNo.split(" ")[0];' +
                 'var ctrlH;' +
                 'if(e.q.tour.selectableOffsets){' +
-                  'var selH="<select class=\\"__erp_day_sel\\" data-gno=\\""+he(e.q.row.groupNo)+"\\" style=\\"font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;\\">";' +
-                  'for(var si=0;si<5;si++){selH+="<option value=\\""+si+"\\"" +(e.q.offsets[0]===si?" selected":"")+">"+"D"+(si+1)+"</option>";}' +
-                  'selH+="</select>";' +
-                  'ctrlH=he(e.q.tour.shortLabel)+" "+selH+" <span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
+                  'var curOff=e.q.offsets[0];var nxtOff=(curOff+1)%5;' +
+                  'var cyc="<span onclick=\\"window.cycleDay(\'"+he(e.q.row.groupNo)+"\'," +curOff+",5)\\" " +' +
+                    '"style=\\"background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);border-radius:3px;padding:0 4px;font-size:9px;cursor:pointer;font-weight:700;\\" " +' +
+                    '"title=\\"點擊切換天數 → D"+(nxtOff+1)+"\\">" +nightLabel(curOff)+" ▶</span>";' +
+                  'ctrlH=he(e.q.tour.shortLabel)+" "+cyc+" <span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
                 '}else{' +
                   'var rvL=e.q.isReversed?"&nbsp;<span style=\\"background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;\\">倒走</span>":"";' +
                   'var gnoH="<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>";' +
@@ -752,6 +752,9 @@ if (!window.__erpDlListenerSet3) {
       'window.setStayDay=function(gno,offset){' +
         'try{localStorage.setItem("erp_v3_day_"+gno,String(offset));}catch(e){}' +
         'rebuildUI();' +
+      '};' +
+      'window.cycleDay=function(gno,cur,total){' +
+        'window.setStayDay(gno,(parseInt(cur,10)+1)%total);' +
       '};' +
       // 事件委派：處理所有 __erp_day_sel 下拉選單的 change 事件
       'document.addEventListener("change",function(ev){' +
