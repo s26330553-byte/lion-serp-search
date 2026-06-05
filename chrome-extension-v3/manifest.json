@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "緩慢瑞萃 民宿衝突警報",
+  "version": "1.0",
+  "description": "從 SERP 搜尋結果偵測「花戀花火美瑛」與「美瑛螃蟹」兩種行程的民宿入住日衝突",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "https://gitberp.liontravel.com/*"
+  ],
+  "icons": {
+    "16":  "icon16.png",
+    "48":  "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_title": "緩慢瑞萃衝突警報",
+    "default_icon": {
+      "16":  "icon16.png",
+      "48":  "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}

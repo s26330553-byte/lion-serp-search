@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>緩慢瑞萃衝突警報 — UI 預覽</title>
+<style>
+body{font-family:Segoe UI,system-ui,sans-serif;background:#f0f2f5;color:#222;margin:0;}
+header{background:linear-gradient(135deg,#4a0e8f,#1a237e);color:white;padding:24px 32px;position:relative;}
+header h1{font-size:20px;font-weight:700;margin:0 0 6px;}
+.meta{font-size:13px;color:rgba(255,255,255,.65);}
+.container{max-width:1400px;margin:0 auto;padding:24px 32px;}
+.section-title{font-size:16px;font-weight:700;color:#1a3a5c;margin:28px 0 12px;display:flex;align-items:center;gap:8px;}
+.stats{display:flex;gap:16px;margin-bottom:4px;flex-wrap:wrap;}
+.stat-card{background:#fff;border-radius:10px;padding:14px 22px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:140px;text-align:center;}
+.stat-num{font-size:28px;font-weight:800;}
+.stat-lbl{font-size:12px;color:#888;margin-top:2px;}
+table{width:100%;border-collapse:collapse;background:white;border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.12);}
+thead th{background:#1a3a5c;color:white;padding:10px 14px;text-align:left;font-size:13px;font-weight:600;white-space:nowrap;}
+tbody tr:nth-child(even){background:#f9fafb;}
+tbody tr:hover{filter:brightness(.97);}
+tbody td{padding:8px 14px;font-size:13px;border-bottom:1px solid #f0f0f0;vertical-align:middle;}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin-top:8px;}
+.legend-item{display:flex;align-items:center;gap:6px;}
+.legend-dot{width:14px;height:14px;border-radius:50%;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🏠 緩慢瑞萃民宿 入住衝突警報</h1>
+  <div class="meta">分析時間：2026-06-05 14:30:00　掃描 248 筆團資料</div>
+  <button style="position:absolute;top:24px;right:32px;padding:7px 20px;
+    background:rgba(255,255,255,.15);color:white;border:1px solid rgba(255,255,255,.4);
+    border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;">⬇ 下載 HTML</button>
+</header>
+
+<div class="container">
+
+  <!-- 統計卡 -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-num" style="color:#2e7d32;">3</div>
+      <div class="stat-lbl">已成團（符合行程）</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#1565c0;">2</div>
+      <div class="stat-lbl">快成團（KK≥10）</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:#c62828;">2</div>
+      <div class="stat-lbl">衝突日數</div>
+    </div>
+  </div>
+
+  <!-- 圖例 -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#c62828;"></div>衝突（多團同一天入住）</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#2e7d32;"></div>已成團（無衝突）</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#1565c0;"></div>快成團（無衝突）</div>
+  </div>
+
+  <!-- 衝突警示 -->
+  <div class="section-title">⚠️ 衝突警示</div>
+
+  <div style="background:#ffebee;border-left:4px solid #c62828;border-radius:8px;padding:14px 20px;margin-bottom:10px;">
+    <div style="font-weight:800;font-size:15px;color:#c62828;margin-bottom:8px;">⚠️ 2026/07/18</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <span style="background:#2e7d32;color:#fff;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;">
+        花戀花火美瑛・第3天　26BRM18BRR　✓已成團
+      </span>
+      <span style="background:#1565c0;color:#fff;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;">
+        美瑛螃蟹・第1天　26BRM18LBR　⚡快成團
+      </span>
+    </div>
+  </div>
+
+  <div style="background:#ffebee;border-left:4px solid #c62828;border-radius:8px;padding:14px 20px;margin-bottom:10px;">
+    <div style="font-weight:800;font-size:15px;color:#c62828;margin-bottom:8px;">⚠️ 2026/07/25</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <span style="background:#2e7d32;color:#fff;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;">
+        美瑛螃蟹・第2天　26BRM24LBR　✓已成團
+      </span>
+      <span style="background:#2e7d32;color:#fff;border-radius:6px;padding:4px 10px;font-size:13px;font-weight:600;">
+        美瑛螃蟹・第1天　26BRM25LBR　✓已成團
+      </span>
+    </div>
+  </div>
+
+  <!-- 月曆 -->
+  <div class="section-title">📅 民宿入住月曆</div>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;">
+
+    <!-- 6月 -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年6月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td></td><td style="text-align:center;padding:5px 2px;">1</td>
+            <td style="text-align:center;padding:5px 2px;">2</td>
+            <td style="text-align:center;padding:5px 2px;">3</td>
+            <td style="text-align:center;padding:5px 2px;">4</td>
+            <td style="text-align:center;padding:5px 2px;font-weight:800;text-decoration:underline;">5</td>
+            <td style="text-align:center;padding:5px 2px;">6</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">7</td>
+            <td style="text-align:center;padding:5px 2px;">8</td>
+            <td style="text-align:center;padding:5px 2px;background:#2e7d32;color:#fff;border-radius:6px;font-weight:700;" title="花戀花火美瑛(第3天) 26BRM07BRR">9</td>
+            <td style="text-align:center;padding:5px 2px;">10</td>
+            <td style="text-align:center;padding:5px 2px;">11</td>
+            <td style="text-align:center;padding:5px 2px;">12</td>
+            <td style="text-align:center;padding:5px 2px;">13</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">14</td>
+            <td style="text-align:center;padding:5px 2px;">15</td>
+            <td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第1天) 26BRM16LBR">16</td>
+            <td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第2天) 26BRM16LBR">17</td>
+            <td style="text-align:center;padding:5px 2px;">18</td>
+            <td style="text-align:center;padding:5px 2px;">19</td>
+            <td style="text-align:center;padding:5px 2px;">20</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">21</td>
+            <td style="text-align:center;padding:5px 2px;">22</td>
+            <td style="text-align:center;padding:5px 2px;">23</td>
+            <td style="text-align:center;padding:5px 2px;">24</td>
+            <td style="text-align:center;padding:5px 2px;">25</td>
+            <td style="text-align:center;padding:5px 2px;">26</td>
+            <td style="text-align:center;padding:5px 2px;">27</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">28</td>
+            <td style="text-align:center;padding:5px 2px;">29</td>
+            <td style="text-align:center;padding:5px 2px;">30</td>
+            <td></td><td></td><td></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 7月 -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年7月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td></td><td></td><td></td>
+            <td style="text-align:center;padding:5px 2px;">1</td>
+            <td style="text-align:center;padding:5px 2px;">2</td>
+            <td style="text-align:center;padding:5px 2px;">3</td>
+            <td style="text-align:center;padding:5px 2px;">4</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">5</td>
+            <td style="text-align:center;padding:5px 2px;">6</td>
+            <td style="text-align:center;padding:5px 2px;">7</td>
+            <td style="text-align:center;padding:5px 2px;">8</td>
+            <td style="text-align:center;padding:5px 2px;">9</td>
+            <td style="text-align:center;padding:5px 2px;">10</td>
+            <td style="text-align:center;padding:5px 2px;">11</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">12</td>
+            <td style="text-align:center;padding:5px 2px;">13</td>
+            <td style="text-align:center;padding:5px 2px;">14</td>
+            <td style="text-align:center;padding:5px 2px;">15</td>
+            <td style="text-align:center;padding:5px 2px;background:#2e7d32;color:#fff;border-radius:6px;font-weight:700;" title="花戀花火美瑛(第3天) 26BRM16BRR">16</td>
+            <td style="text-align:center;padding:5px 2px;">17</td>
+            <td style="text-align:center;padding:5px 2px;background:#c62828;color:#fff;border-radius:6px;font-weight:700;" title="花戀花火美瑛(第3天) ✕ 美瑛螃蟹(第1天)">18</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第2天) 26BRM18LBR">19</td>
+            <td style="text-align:center;padding:5px 2px;">20</td>
+            <td style="text-align:center;padding:5px 2px;">21</td>
+            <td style="text-align:center;padding:5px 2px;">22</td>
+            <td style="text-align:center;padding:5px 2px;">23</td>
+            <td style="text-align:center;padding:5px 2px;background:#2e7d32;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第1天) 26BRM24LBR">24</td>
+            <td style="text-align:center;padding:5px 2px;background:#c62828;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第2天) 26BRM24LBR ✕ 美瑛螃蟹(第1天) 26BRM25LBR">25</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;background:#2e7d32;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第2天) 26BRM25LBR">26</td>
+            <td style="text-align:center;padding:5px 2px;">27</td>
+            <td style="text-align:center;padding:5px 2px;">28</td>
+            <td style="text-align:center;padding:5px 2px;">29</td>
+            <td style="text-align:center;padding:5px 2px;">30</td>
+            <td style="text-align:center;padding:5px 2px;">31</td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 8月 -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年8月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr>
+            <td></td><td></td><td></td><td></td><td></td><td></td>
+            <td style="text-align:center;padding:5px 2px;">1</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">2</td>
+            <td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="花戀花火美瑛(第3天) 26BRM01BRR">3</td>
+            <td style="text-align:center;padding:5px 2px;">4</td>
+            <td style="text-align:center;padding:5px 2px;">5</td>
+            <td style="text-align:center;padding:5px 2px;">6</td>
+            <td style="text-align:center;padding:5px 2px;">7</td>
+            <td style="text-align:center;padding:5px 2px;">8</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">9</td>
+            <td style="text-align:center;padding:5px 2px;">10</td>
+            <td style="text-align:center;padding:5px 2px;">11</td>
+            <td style="text-align:center;padding:5px 2px;">12</td>
+            <td style="text-align:center;padding:5px 2px;">13</td>
+            <td style="text-align:center;padding:5px 2px;">14</td>
+            <td style="text-align:center;padding:5px 2px;">15</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">16</td>
+            <td style="text-align:center;padding:5px 2px;">17</td>
+            <td style="text-align:center;padding:5px 2px;">18</td>
+            <td style="text-align:center;padding:5px 2px;">19</td>
+            <td style="text-align:center;padding:5px 2px;">20</td>
+            <td style="text-align:center;padding:5px 2px;">21</td>
+            <td style="text-align:center;padding:5px 2px;">22</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">23</td>
+            <td style="text-align:center;padding:5px 2px;">24</td>
+            <td style="text-align:center;padding:5px 2px;">25</td>
+            <td style="text-align:center;padding:5px 2px;">26</td>
+            <td style="text-align:center;padding:5px 2px;">27</td>
+            <td style="text-align:center;padding:5px 2px;">28</td>
+            <td style="text-align:center;padding:5px 2px;">29</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;padding:5px 2px;">30</td>
+            <td style="text-align:center;padding:5px 2px;">31</td>
+            <td></td><td></td><td></td><td></td><td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+
+    <!-- 9月 (空白月) -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年9月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr><td></td><td style="text-align:center;padding:5px 2px;">1</td><td style="text-align:center;padding:5px 2px;">2</td><td style="text-align:center;padding:5px 2px;">3</td><td style="text-align:center;padding:5px 2px;">4</td><td style="text-align:center;padding:5px 2px;">5</td><td style="text-align:center;padding:5px 2px;">6</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">7</td><td style="text-align:center;padding:5px 2px;">8</td><td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第1天) 26BRM09LBR">9</td><td style="text-align:center;padding:5px 2px;background:#1565c0;color:#fff;border-radius:6px;font-weight:700;" title="美瑛螃蟹(第2天) 26BRM09LBR">10</td><td style="text-align:center;padding:5px 2px;">11</td><td style="text-align:center;padding:5px 2px;">12</td><td style="text-align:center;padding:5px 2px;">13</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">14</td><td style="text-align:center;padding:5px 2px;">15</td><td style="text-align:center;padding:5px 2px;">16</td><td style="text-align:center;padding:5px 2px;">17</td><td style="text-align:center;padding:5px 2px;">18</td><td style="text-align:center;padding:5px 2px;">19</td><td style="text-align:center;padding:5px 2px;">20</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">21</td><td style="text-align:center;padding:5px 2px;">22</td><td style="text-align:center;padding:5px 2px;">23</td><td style="text-align:center;padding:5px 2px;">24</td><td style="text-align:center;padding:5px 2px;">25</td><td style="text-align:center;padding:5px 2px;">26</td><td style="text-align:center;padding:5px 2px;">27</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">28</td><td style="text-align:center;padding:5px 2px;">29</td><td style="text-align:center;padding:5px 2px;">30</td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 10月 -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年10月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr><td></td><td></td><td></td><td style="text-align:center;padding:5px 2px;">1</td><td style="text-align:center;padding:5px 2px;">2</td><td style="text-align:center;padding:5px 2px;">3</td><td style="text-align:center;padding:5px 2px;">4</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">5</td><td style="text-align:center;padding:5px 2px;">6</td><td style="text-align:center;padding:5px 2px;">7</td><td style="text-align:center;padding:5px 2px;">8</td><td style="text-align:center;padding:5px 2px;">9</td><td style="text-align:center;padding:5px 2px;">10</td><td style="text-align:center;padding:5px 2px;">11</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">12</td><td style="text-align:center;padding:5px 2px;">13</td><td style="text-align:center;padding:5px 2px;">14</td><td style="text-align:center;padding:5px 2px;">15</td><td style="text-align:center;padding:5px 2px;">16</td><td style="text-align:center;padding:5px 2px;">17</td><td style="text-align:center;padding:5px 2px;">18</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">19</td><td style="text-align:center;padding:5px 2px;">20</td><td style="text-align:center;padding:5px 2px;">21</td><td style="text-align:center;padding:5px 2px;">22</td><td style="text-align:center;padding:5px 2px;">23</td><td style="text-align:center;padding:5px 2px;">24</td><td style="text-align:center;padding:5px 2px;">25</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">26</td><td style="text-align:center;padding:5px 2px;">27</td><td style="text-align:center;padding:5px 2px;">28</td><td style="text-align:center;padding:5px 2px;">29</td><td style="text-align:center;padding:5px 2px;">30</td><td style="text-align:center;padding:5px 2px;">31</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 11月 -->
+    <div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">
+      <div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">2026年11月</div>
+      <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+        <thead><tr>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#c62828;">日</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">一</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">二</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">三</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">四</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#555;">五</th>
+          <th style="text-align:center;font-size:12px;padding:4px 0;color:#1565c0;">六</th>
+        </tr></thead>
+        <tbody>
+          <tr><td></td><td></td><td></td><td></td><td></td><td></td><td style="text-align:center;padding:5px 2px;">1</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">2</td><td style="text-align:center;padding:5px 2px;">3</td><td style="text-align:center;padding:5px 2px;">4</td><td style="text-align:center;padding:5px 2px;">5</td><td style="text-align:center;padding:5px 2px;">6</td><td style="text-align:center;padding:5px 2px;">7</td><td style="text-align:center;padding:5px 2px;">8</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">9</td><td style="text-align:center;padding:5px 2px;">10</td><td style="text-align:center;padding:5px 2px;">11</td><td style="text-align:center;padding:5px 2px;">12</td><td style="text-align:center;padding:5px 2px;">13</td><td style="text-align:center;padding:5px 2px;">14</td><td style="text-align:center;padding:5px 2px;">15</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">16</td><td style="text-align:center;padding:5px 2px;">17</td><td style="text-align:center;padding:5px 2px;">18</td><td style="text-align:center;padding:5px 2px;">19</td><td style="text-align:center;padding:5px 2px;">20</td><td style="text-align:center;padding:5px 2px;">21</td><td style="text-align:center;padding:5px 2px;">22</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">23</td><td style="text-align:center;padding:5px 2px;">24</td><td style="text-align:center;padding:5px 2px;">25</td><td style="text-align:center;padding:5px 2px;">26</td><td style="text-align:center;padding:5px 2px;">27</td><td style="text-align:center;padding:5px 2px;">28</td><td style="text-align:center;padding:5px 2px;">29</td></tr>
+          <tr><td style="text-align:center;padding:5px 2px;">30</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- end calendars -->
+
+  <!-- 提示說明 -->
+  <div style="margin-top:10px;font-size:12px;color:#888;">
+    💡 滑鼠移到有顏色的日期格可以看到是哪些團
+  </div>
+
+  <!-- 符合行程清單 -->
+  <div class="section-title">📋 符合行程清單（已成團 + 快成團）</div>
+  <table>
+    <thead>
+      <tr>
+        <th>團號</th><th>行程類型</th><th>航空</th><th>出發日</th>
+        <th>民宿入住日</th><th>狀態</th><th>HK</th><th>KK</th><th>可賣</th>
+        <th style="min-width:200px;">備註</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- 衝突列 (橙底) -->
+      <tr style="background:#fff3e0;">
+        <td style="font-family:monospace;font-size:12px;white-space:nowrap;">26BRM16BRR</td>
+        <td style="font-size:12px;color:#1565c0;font-weight:600;">花戀花火美瑛</td>
+        <td style="font-weight:700;color:#1558d6;text-align:center;">BR</td>
+        <td style="text-align:center;">2026/07/16</td>
+        <td>
+          <span style="color:#c62828;font-weight:800;">2026/07/18(第3天) ⚠️</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="background:#2e7d32;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">✓ 已成團</span>
+        </td>
+        <td style="text-align:center;color:#1565c0;font-weight:600;">12</td>
+        <td style="text-align:center;color:#2e7d32;font-weight:600;">8</td>
+        <td style="text-align:center;font-weight:600;">2</td>
+        <td><input placeholder="備註…" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:#fafafa;font-family:inherit;outline:none;"></td>
+      </tr>
+      <tr style="background:#fff3e0;">
+        <td style="font-family:monospace;font-size:12px;white-space:nowrap;">26BRM18LBR</td>
+        <td style="font-size:12px;color:#6a1b9a;font-weight:600;">美瑛螃蟹</td>
+        <td style="font-weight:700;color:#1558d6;text-align:center;">BR</td>
+        <td style="text-align:center;">2026/07/18</td>
+        <td>
+          <span style="color:#c62828;font-weight:800;">2026/07/18(第1天) ⚠️</span><br>
+          <span style="color:#333;">2026/07/19(第2天)</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="background:#1565c0;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">⚡ 快成團</span>
+        </td>
+        <td style="text-align:center;color:#1565c0;font-weight:600;">6</td>
+        <td style="text-align:center;color:#2e7d32;font-weight:600;">11</td>
+        <td style="text-align:center;font-weight:600;">5</td>
+        <td><input placeholder="備註…" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:#fafafa;font-family:inherit;outline:none;"></td>
+      </tr>
+      <!-- 正常列 -->
+      <tr>
+        <td style="font-family:monospace;font-size:12px;white-space:nowrap;">26BRM07BRR</td>
+        <td style="font-size:12px;color:#1565c0;font-weight:600;">花戀花火美瑛</td>
+        <td style="font-weight:700;color:#1558d6;text-align:center;">BR</td>
+        <td style="text-align:center;">2026/06/07</td>
+        <td>
+          <span style="color:#333;">2026/06/09(第3天)</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="background:#2e7d32;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">✓ 已成團</span>
+        </td>
+        <td style="text-align:center;color:#1565c0;font-weight:600;">14</td>
+        <td style="text-align:center;color:#2e7d32;font-weight:600;">6</td>
+        <td style="text-align:center;font-weight:600;">3</td>
+        <td><input placeholder="備註…" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:#fafafa;font-family:inherit;outline:none;"></td>
+      </tr>
+      <tr style="background:#f9fafb;">
+        <td style="font-family:monospace;font-size:12px;white-space:nowrap;">26BRM16LBR</td>
+        <td style="font-size:12px;color:#6a1b9a;font-weight:600;">美瑛螃蟹</td>
+        <td style="font-weight:700;color:#1558d6;text-align:center;">BR</td>
+        <td style="text-align:center;">2026/06/16</td>
+        <td>
+          <span style="color:#333;">2026/06/16(第1天)</span><br>
+          <span style="color:#333;">2026/06/17(第2天)</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="background:#1565c0;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">⚡ 快成團</span>
+        </td>
+        <td style="text-align:center;color:#1565c0;font-weight:600;">5</td>
+        <td style="text-align:center;color:#2e7d32;font-weight:600;">10</td>
+        <td style="text-align:center;font-weight:600;">7</td>
+        <td><input placeholder="備註…" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:#fafafa;font-family:inherit;outline:none;"></td>
+      </tr>
+      <tr>
+        <td style="font-family:monospace;font-size:12px;white-space:nowrap;">26BRM24LBR</td>
+        <td style="font-size:12px;color:#6a1b9a;font-weight:600;">美瑛螃蟹</td>
+        <td style="font-weight:700;color:#1558d6;text-align:center;">BR</td>
+        <td style="text-align:center;">2026/07/24</td>
+        <td>
+          <span style="color:#333;">2026/07/24(第1天)</span><br>
+          <span style="color:#c62828;font-weight:800;">2026/07/25(第2天) ⚠️</span>
+        </td>
+        <td style="text-align:center;">
+          <span style="background:#2e7d32;color:#fff;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;">✓ 已成團</span>
+        </td>
+        <td style="text-align:center;color:#1565c0;font-weight:600;">16</td>
+        <td style="text-align:center;color:#2e7d32;font-weight:600;">4</td>
+        <td style="text-align:center;font-weight:600;">1</td>
+        <td><input placeholder="備註…" style="width:100%;box-sizing:border-box;border:1px solid #ddd;border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:#fafafa;font-family:inherit;outline:none;"></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:16px;display:flex;align-items:center;justify-content:flex-end;gap:12px;">
+    <span style="font-size:12px;color:#43a047;opacity:0;transition:opacity .3s;">✓ 已儲存</span>
+    <button style="padding:8px 24px;background:#43a047;color:white;border:none;
+      border-radius:7px;cursor:pointer;font-size:14px;font-weight:600;">💾 儲存所有備註</button>
+  </div>
+
+</div><!-- end container -->
+</body>
+</html>
