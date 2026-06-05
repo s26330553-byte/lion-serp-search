@@ -414,8 +414,8 @@ if (!window.__erpDlListenerSet3) {
               var gno = e.q.row.groupNo.split(' ')[0];
               var ctrlHtml;
               if (e.q.tour.selectableOffsets) {
-                // 特選花戀：下拉選 D1~D5
-                var selHtml = '<select onchange="window.setStayDay(\''+he(e.q.row.groupNo)+'\',this.value)" ' +
+                // 特選花戀：下拉選 D1~D5（用 data-gno 避免 this 引號衝突）
+                var selHtml = '<select class="__erp_day_sel" data-gno="'+he(e.q.row.groupNo)+'" ' +
                   'style="font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;">';
                 for (var si = 0; si < 5; si++) {
                   selHtml += '<option value="'+si+'"'+(e.q.offsets[0]===si?' selected':'')+'>D'+(si+1)+'</option>';
@@ -462,7 +462,7 @@ if (!window.__erpDlListenerSet3) {
         var revBtn = '';
         var revBadge = '';
         if (q.tour.selectableOffsets) {
-          var selHtml2 = '<select onchange="window.setStayDay(\''+he(r.groupNo)+'\',this.value)" ' +
+          var selHtml2 = '<select class="__erp_day_sel" data-gno="'+he(r.groupNo)+'" ' +
             'style="margin-top:4px;width:100%;padding:4px 6px;font-size:13px;border:1px solid #90a4d4;border-radius:4px;cursor:pointer;background:#f0f4ff;">';
           for (var si2 = 0; si2 < 5; si2++) {
             selHtml2 += '<option value="'+si2+'"'+(q.customDay===si2?' selected':'')+'>D'+(si2+1)+'（出發後第'+(si2+1)+'天）</option>';
@@ -670,7 +670,7 @@ if (!window.__erpDlListenerSet3) {
                 'var gno2=e.q.row.groupNo.split(" ")[0];' +
                 'var ctrlH;' +
                 'if(e.q.tour.selectableOffsets){' +
-                  'var selH="<select onchange=\\"window.setStayDay(\'"+he(e.q.row.groupNo)+"',this.value)\\" style=\\"font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;\\">";' +
+                  'var selH="<select class=\\"__erp_day_sel\\" data-gno=\\""+he(e.q.row.groupNo)+"\\" style=\\"font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;\\">";' +
                   'for(var si=0;si<5;si++){selH+="<option value=\\""+si+"\\"" +(e.q.offsets[0]===si?" selected":"")+">"+"D"+(si+1)+"</option>";}' +
                   'selH+="</select>";' +
                   'ctrlH=he(e.q.tour.shortLabel)+" "+selH+" <span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
@@ -705,7 +705,7 @@ if (!window.__erpDlListenerSet3) {
           'var inp="<input class=\\"__erp_v3_note\\" data-gno=\\""+he(r.groupNo)+"\\" value=\\""+he(saved)+"\\" placeholder=\\"備註…\\" style=\\"width:100%;box-sizing:border-box;border:1px solid "+(saved?"#ffc107":"#ddd")+";border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:"+(saved?"#fff8e1":"#fafafa")+";font-family:inherit;outline:none;\\">";' +
           'var revBtn="",rb="";' +
           'if(q.tour.selectableOffsets){' +
-            'var sel2="<select onchange=\\"window.setStayDay(\'"+he(r.groupNo)+"',this.value)\\" style=\\"margin-top:4px;width:100%;padding:4px 6px;font-size:13px;border:1px solid #90a4d4;border-radius:4px;cursor:pointer;background:#f0f4ff;\\">";' +
+            'var sel2="<select class=\\"__erp_day_sel\\" data-gno=\\""+he(r.groupNo)+"\\" style=\\"margin-top:4px;width:100%;padding:4px 6px;font-size:13px;border:1px solid #90a4d4;border-radius:4px;cursor:pointer;background:#f0f4ff;\\">";' +
             'for(var si=0;si<5;si++){sel2+="<option value=\\""+si+"\\"" +(q.customDay===si?" selected":"")+">"+"D"+(si+1)+"（出發後第"+(si+1)+"天）</option>";}' +
             'sel2+="</select>";revBtn=sel2;' +
             'if(q.customDay!==q.tour.defaultOffset){rb="<span style=\\"background:#1565c0;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;\\">D"+(q.customDay+1)+"</span>";}' +
@@ -753,6 +753,14 @@ if (!window.__erpDlListenerSet3) {
         'try{localStorage.setItem("erp_v3_day_"+gno,String(offset));}catch(e){}' +
         'rebuildUI();' +
       '};' +
+      // 事件委派：處理所有 __erp_day_sel 下拉選單的 change 事件
+      'document.addEventListener("change",function(ev){' +
+        'var t=ev.target;' +
+        'if(t&&t.className&&t.className.indexOf("__erp_day_sel")>=0){' +
+          'var gno=t.getAttribute("data-gno");' +
+          'if(gno)window.setStayDay(gno,t.value);' +
+        '}' +
+      '});' +
       '})();';
 
     // ── 組合最終 HTML ──────────────────────────────────────────
