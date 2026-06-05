@@ -109,7 +109,7 @@ if (!window.__erpDlListenerSet3) {
     return d.getFullYear() + '/' + (m < 10 ? '0' : '') + m + '/' + (dd < 10 ? '0' : '') + dd;
   }
 
-  function nightLabel(offset) { return '第' + (offset + 1) + '天'; }
+  function nightLabel(offset) { return 'D' + (offset + 1); }
 
   // ── 動態欄位偵測（沿用 v2）────────────────────────────────────
   function buildColMap(table) {
@@ -530,7 +530,7 @@ if (!window.__erpDlListenerSet3) {
       'function he(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}' +
       'function addDays(d,n){var x=new Date(d.getTime());x.setDate(x.getDate()+n);return x;}' +
       'function fmtDate(d){var m=d.getMonth()+1,dd=d.getDate();return d.getFullYear()+"/"+(m<10?"0":"")+m+"/"+(dd<10?"0":"")+dd;}' +
-      'function nightLabel(o){return "第"+(o+1)+"天";}' +
+      'function nightLabel(o){return "D"+(o+1);}' +
       'function departureDateObj(gno){' +
         'var g=gno.split(" ")[0];if(g.length<7)return null;' +
         'var yr=2000+parseInt(g.slice(0,2),10),mc=g[4],day=parseInt(g.slice(5,7),10),mo;' +
