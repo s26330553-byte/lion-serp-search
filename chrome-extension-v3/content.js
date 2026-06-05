@@ -354,11 +354,11 @@ if (!window.__erpDlListenerSet3) {
 
     function renderCalendar(d) {
       var weekdays = ['日','一','二','三','四','五','六'];
-      var html = '<div style="display:flex;flex-wrap:wrap;gap:20px;">';
+      var html = '<div style="display:flex;flex-direction:column;gap:24px;">';
       calMonths.forEach(function(cm) {
         var firstDay = new Date(cm.year, cm.month, 1).getDay();
         var daysInMonth = new Date(cm.year, cm.month + 1, 0).getDate();
-        html += '<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:420px;flex:1;">' +
+        html += '<div style="background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);width:100%;box-sizing:border-box;">' +
           '<div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">' + cm.year + '年' + (cm.month+1) + '月</div>' +
           '<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><thead><tr>';
         weekdays.forEach(function(wd, wi) {
@@ -589,11 +589,11 @@ if (!window.__erpDlListenerSet3) {
       '}' +
       'function renderCalendar(d){' +
         'var wds=["日","一","二","三","四","五","六"];' +
-        'var html="<div style=\\"display:flex;flex-wrap:wrap;gap:20px;\\">";' +
+        'var html="<div style=\\"display:flex;flex-direction:column;gap:24px;\\">";' +
         '_calMonths.forEach(function(cm){' +
           'var firstDay=new Date(cm.year,cm.month,1).getDay();' +
           'var dim=new Date(cm.year,cm.month+1,0).getDate();' +
-          'html+="<div style=\\"background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:420px;flex:1;\\">" +' +
+          'html+="<div style=\\"background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);width:100%;box-sizing:border-box;\\">" +' +
             '"<div style=\\"text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;\\">"+cm.year+"年"+(cm.month+1)+"月</div>" +' +
             '"<table style=\\"width:100%;border-collapse:collapse;table-layout:fixed;\\"><thead><tr>";' +
           'wds.forEach(function(wd,wi){' +
