@@ -1,21 +1,25 @@
-// content.js — 緩慢瑞萃民宿衝突警報 v3.1
-// 新增：美瑛螃蟹行程「倒走」切換（第1,2天 ↔ 第4,5天），點按即時重算
+// content.js — 緩慢瑞萃民宿衝突警報 v3.2
+// 新增：特選花戀入住天數下拉自選（D1~D5，預設D3）
 
 // ── 民宿行程設定 ─────────────────────────────────────────────────
 var TOURS = [
   {
-    keyword:        '花戀北海道花火美瑛',
-    shortLabel:     '特選花戀',
-    stayOffsets:    [2],          // 出發日 +2 = 第3天入住
-    reversedOffsets: null,        // 無倒走版本
-    color:          '#1565c0'
+    keyword:          '花戀北海道花火美瑛',
+    shortLabel:       '特選花戀',
+    stayOffsets:      [2],            // 預設 D3
+    defaultOffset:    2,              // D3 = index 2
+    selectableOffsets:[0,1,2,3,4],   // 可自選 D1~D5
+    reversedOffsets:  null,
+    color:            '#1565c0'
   },
   {
-    keyword:        '北海道美瑛螃蟹',
-    shortLabel:     '限定PLUS',
-    stayOffsets:    [0, 1],       // 正走：出發日 +0,+1 = 第1,2天
-    reversedOffsets: [3, 4],      // 倒走：出發日 +3,+4 = 第4,5天
-    color:          '#6a1b9a'
+    keyword:          '北海道美瑛螃蟹',
+    shortLabel:       '限定PLUS',
+    stayOffsets:      [0, 1],         // 正走 D1,D2
+    defaultOffset:    null,
+    selectableOffsets:null,
+    reversedOffsets:  [3, 4],         // 倒走 D4,D5
+    color:            '#6a1b9a'
   }
 ];
 
@@ -268,6 +272,10 @@ if (!window.__erpDlListenerSet3) {
     });
 
     // ── server-side buildData（讀 localStorage）─────────────────
+    function getSavedDay(gno, def) {
+      try { var v = localStorage.getItem('erp_v3_day_' + gno); return v !== null ? parseInt(v, 10) : def; } catch(e) { return def; }
+    }
+
     function buildData(getRevFn) {
       var qualified = [];
       allRows.forEach(function(r) {
@@ -276,8 +284,14 @@ if (!window.__erpDlListenerSet3) {
         if (!isFormed(r) && !isForming(r)) return;
         var dep = departureDateObj(r.groupNo);
         if (!dep) return;
-        var rev = tour.reversedOffsets && getRevFn(r.groupNo);
-        var offsets = rev ? tour.reversedOffsets : tour.stayOffsets;
+        var offsets, isRev = false, customDay = null;
+        if (tour.selectableOffsets) {
+          customDay = getSavedDay(r.groupNo, tour.defaultOffset);
+          offsets = [customDay];
+        } else {
+          isRev = !!(tour.reversedOffsets && getRevFn(r.groupNo));
+          offsets = isRev ? tour.reversedOffsets : tour.stayOffsets;
+        }
         var stayDates = offsets.map(function(o) { return fmtDate(addDays(dep, o)); });
         qualified.push({
           row:r, tour:tour,
@@ -285,7 +299,8 @@ if (!window.__erpDlListenerSet3) {
           depDate: fmtDate(dep),
           stayDates: stayDates,
           offsets: offsets,
-          isReversed: !!rev
+          isReversed: isRev,
+          customDay: customDay
         });
       });
       var dateMap = {};
@@ -397,15 +412,25 @@ if (!window.__erpDlListenerSet3) {
             inner = '<div style="font-size:14px;font-weight:800;text-align:center;margin-bottom:3px;">'+day+(isConflict?' ⚠️':'')+'</div>';
             entries.forEach(function(e){
               var gno = e.q.row.groupNo.split(' ')[0];
-              var canToggle = !!e.q.tour.reversedOffsets;
-              var revLabel = e.q.isReversed ? '&nbsp;<span style="background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;">倒走</span>' : '';
-              var gnoHtml = canToggle
-                ? '<span onclick="window.toggleReversed(\''+he(e.q.row.groupNo)+'\')" ' +
+              var ctrlHtml;
+              if (e.q.tour.selectableOffsets) {
+                // 特選花戀：下拉選 D1~D5
+                var selHtml = '<select onchange="window.setStayDay(\''+he(e.q.row.groupNo)+'\',this.value)" ' +
+                  'style="font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;">';
+                for (var si = 0; si < 5; si++) {
+                  selHtml += '<option value="'+si+'"'+(e.q.offsets[0]===si?' selected':'')+'>D'+(si+1)+'</option>';
+                }
+                selHtml += '</select>';
+                ctrlHtml = he(e.q.tour.shortLabel)+' '+selHtml+' <span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
+              } else {
+                // 限定PLUS：倒走切換
+                var revLabel = e.q.isReversed ? '&nbsp;<span style="background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;">倒走</span>' : '';
+                var gnoHtml = '<span onclick="window.toggleReversed(\''+he(e.q.row.groupNo)+'\')" ' +
                   'style="font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);" ' +
-                  'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>'
-                : '<span style="font-family:monospace;font-size:10px;">'+he(gno)+'</span>';
-              inner += '<div style="font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;">' +
-                he(e.q.tour.shortLabel)+' '+e.nightLabel+revLabel+' '+gnoHtml + '</div>';
+                  'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>';
+                ctrlHtml = he(e.q.tour.shortLabel)+' '+nightLabel(e.q.offsets[0])+revLabel+' '+gnoHtml;
+              }
+              inner += '<div style="font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;">'+ctrlHtml+'</div>';
             });
           }
           html += '<td title="'+he(cellTitle)+'" style="'+dayStyle+'">'+inner+'</td>';
@@ -433,19 +458,30 @@ if (!window.__erpDlListenerSet3) {
         try { saved = localStorage.getItem('erp_v3_note_' + r.groupNo) || ''; } catch(e) {}
         var inpStyle = 'width:100%;box-sizing:border-box;border:1px solid '+(saved?'#ffc107':'#ddd')+';border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:'+(saved?'#fff8e1':'#fafafa')+';font-family:inherit;outline:none;';
 
-        // 倒走按鈕（只有有 reversedOffsets 的行程才顯示）
+        // 控制區（特選花戀：下拉；限定PLUS：倒走按鈕）
         var revBtn = '';
-        if (q.tour.reversedOffsets) {
+        var revBadge = '';
+        if (q.tour.selectableOffsets) {
+          var selHtml2 = '<select onchange="window.setStayDay(\''+he(r.groupNo)+'\',this.value)" ' +
+            'style="margin-top:4px;width:100%;padding:4px 6px;font-size:13px;border:1px solid #90a4d4;border-radius:4px;cursor:pointer;background:#f0f4ff;">';
+          for (var si2 = 0; si2 < 5; si2++) {
+            selHtml2 += '<option value="'+si2+'"'+(q.customDay===si2?' selected':'')+'>D'+(si2+1)+'（出發後第'+(si2+1)+'天）</option>';
+          }
+          selHtml2 += '</select>';
+          revBtn = selHtml2;
+          if (q.customDay !== q.tour.defaultOffset) {
+            revBadge = '<span style="background:#1565c0;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;">D'+(q.customDay+1)+'</span>';
+          }
+        } else if (q.tour.reversedOffsets) {
           if (q.isReversed) {
             revBtn = '<button onclick="window.toggleReversed(\'' + he(r.groupNo) + '\')" ' +
-              'style="margin-top:4px;width:100%;padding:3px 8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">↩️ 還原正走（第1,2天）</button>';
+              'style="margin-top:4px;width:100%;padding:3px 8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">↩️ 還原正走（D1,D2）</button>';
+            revBadge = '<span style="background:#6a1b9a;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;">🔄倒走</span>';
           } else {
             revBtn = '<button onclick="window.toggleReversed(\'' + he(r.groupNo) + '\')" ' +
-              'style="margin-top:4px;width:100%;padding:3px 8px;background:#fff;color:#6a1b9a;border:1px solid #6a1b9a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">🔄 標記為倒走（第4,5天）</button>';
+              'style="margin-top:4px;width:100%;padding:3px 8px;background:#fff;color:#6a1b9a;border:1px solid #6a1b9a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;">🔄 標記為倒走（D4,D5）</button>';
           }
         }
-
-        var revBadge = q.isReversed ? '<span style="background:#6a1b9a;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;">🔄倒走</span>' : '';
 
         return '<tr style="background:'+rowBg+';">' +
           '<td style="font-family:monospace;font-size:12px;white-space:nowrap;">' + he(r.groupNo) + '</td>' +
@@ -541,16 +577,18 @@ if (!window.__erpDlListenerSet3) {
       'function isFormed(r){return r.remark.indexOf("成團")>=0;}' +
       'function isForming(r){return r.kk>=10&&r.remark.indexOf("成團")<0&&r.orderType!=="NJ"&&r.orderType.indexOf("TKT")<0;}' +
       'function getIsReversed(gno){try{return !!localStorage.getItem("erp_v3_rev_"+gno);}catch(e){return false;}}' +
+      'function getSavedDay(gno,def){try{var v=localStorage.getItem("erp_v3_day_"+gno);return v!==null?parseInt(v,10):def;}catch(e){return def;}}' +
       'function buildData(){' +
         'var qualified=[];' +
         '_rows.forEach(function(r){' +
           'var tour=matchTour(r.teamName);if(!tour)return;' +
           'if(!isFormed(r)&&!isForming(r))return;' +
           'var dep=departureDateObj(r.groupNo);if(!dep)return;' +
-          'var rev=tour.reversedOffsets&&getIsReversed(r.groupNo);' +
-          'var offsets=rev?tour.reversedOffsets:tour.stayOffsets;' +
+          'var offsets,isRev=false,customDay=null;' +
+          'if(tour.selectableOffsets){customDay=getSavedDay(r.groupNo,tour.defaultOffset);offsets=[customDay];}' +
+          'else{isRev=!!(tour.reversedOffsets&&getIsReversed(r.groupNo));offsets=isRev?tour.reversedOffsets:tour.stayOffsets;}' +
           'var stayDates=offsets.map(function(o){return fmtDate(addDays(dep,o));});' +
-          'qualified.push({row:r,tour:tour,status:isFormed(r)?"formed":"forming",depDate:fmtDate(dep),stayDates:stayDates,offsets:offsets,isReversed:!!rev});' +
+          'qualified.push({row:r,tour:tour,status:isFormed(r)?"formed":"forming",depDate:fmtDate(dep),stayDates:stayDates,offsets:offsets,isReversed:isRev,customDay:customDay});' +
         '});' +
         'var dateMap={};' +
         'qualified.forEach(function(q){' +
@@ -630,13 +668,18 @@ if (!window.__erpDlListenerSet3) {
               'inner2="<div style=\\"font-size:14px;font-weight:800;text-align:center;margin-bottom:3px;\\">"+day+(isC?" ⚠️":"")+"</div>";' +
               'entries.forEach(function(e){' +
                 'var gno2=e.q.row.groupNo.split(" ")[0];' +
-                'var canT=!!e.q.tour.reversedOffsets;' +
-                'var rvL=e.q.isReversed?"&nbsp;<span style=\\"background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;\\">倒走</span>":"";' +
-                'var gnoH=canT' +
-                  '?"<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>"' +
-                  ':"<span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
-                'inner2+="<div style=\\"font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;\\">" +' +
-                  'he(e.q.tour.shortLabel)+" "+e.nightLabel+rvL+" "+gnoH+"</div>";' +
+                'var ctrlH;' +
+                'if(e.q.tour.selectableOffsets){' +
+                  'var selH="<select onchange=\\"window.setStayDay(\'"+he(e.q.row.groupNo)+"',this.value)\\" style=\\"font-size:9px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:inherit;border-radius:3px;cursor:pointer;padding:0 1px;\\">";' +
+                  'for(var si=0;si<5;si++){selH+="<option value=\\""+si+"\\"" +(e.q.offsets[0]===si?" selected":"")+">"+"D"+(si+1)+"</option>";}' +
+                  'selH+="</select>";' +
+                  'ctrlH=he(e.q.tour.shortLabel)+" "+selH+" <span style=\\"font-family:monospace;font-size:10px;\\">"+he(gno2)+"</span>";' +
+                '}else{' +
+                  'var rvL=e.q.isReversed?"&nbsp;<span style=\\"background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;\\">倒走</span>":"";' +
+                  'var gnoH="<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>";' +
+                  'ctrlH=he(e.q.tour.shortLabel)+" "+nightLabel(e.q.offsets[0])+rvL+" "+gnoH;' +
+                '}' +
+                'inner2+="<div style=\\"font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;\\">"+ctrlH+"</div>";' +
               '});' +
             '}' +
             'html+="<td title=\\""+he(cellTitle)+"\\" style=\\""+ds2+"\\">"+inner2+"</td>";' +
@@ -660,12 +703,16 @@ if (!window.__erpDlListenerSet3) {
           'var rowBg=stayC?"#fff3e0":(q.isReversed?"#f3e5f5":"");' +
           'var saved="";try{saved=localStorage.getItem("erp_v3_note_"+r.groupNo)||"";}catch(e){}' +
           'var inp="<input class=\\"__erp_v3_note\\" data-gno=\\""+he(r.groupNo)+"\\" value=\\""+he(saved)+"\\" placeholder=\\"備註…\\" style=\\"width:100%;box-sizing:border-box;border:1px solid "+(saved?"#ffc107":"#ddd")+";border-radius:5px;padding:4px 8px;font-size:13px;color:#444;background:"+(saved?"#fff8e1":"#fafafa")+";font-family:inherit;outline:none;\\">";' +
-          'var revBtn="";' +
-          'if(q.tour.reversedOffsets){' +
-            'if(q.isReversed){revBtn="<button onclick=\\"window.toggleReversed(\'"+he(r.groupNo)+"\')\\" style=\\"margin-top:4px;width:100%;padding:3px 8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;\\">↩️ 還原正走（第1,2天）</button>";}' +
-            'else{revBtn="<button onclick=\\"window.toggleReversed(\'"+he(r.groupNo)+"\')\\" style=\\"margin-top:4px;width:100%;padding:3px 8px;background:#fff;color:#6a1b9a;border:1px solid #6a1b9a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;\\">🔄 標記為倒走（第4,5天）</button>";}' +
+          'var revBtn="",rb="";' +
+          'if(q.tour.selectableOffsets){' +
+            'var sel2="<select onchange=\\"window.setStayDay(\'"+he(r.groupNo)+"',this.value)\\" style=\\"margin-top:4px;width:100%;padding:4px 6px;font-size:13px;border:1px solid #90a4d4;border-radius:4px;cursor:pointer;background:#f0f4ff;\\">";' +
+            'for(var si=0;si<5;si++){sel2+="<option value=\\""+si+"\\"" +(q.customDay===si?" selected":"")+">"+"D"+(si+1)+"（出發後第"+(si+1)+"天）</option>";}' +
+            'sel2+="</select>";revBtn=sel2;' +
+            'if(q.customDay!==q.tour.defaultOffset){rb="<span style=\\"background:#1565c0;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;\\">D"+(q.customDay+1)+"</span>";}' +
+          '}else if(q.tour.reversedOffsets){' +
+            'if(q.isReversed){revBtn="<button onclick=\\"window.toggleReversed(\'"+he(r.groupNo)+"\')\\" style=\\"margin-top:4px;width:100%;padding:3px 8px;background:#6a1b9a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;\\">↩️ 還原正走（D1,D2）</button>";rb="<span style=\\"background:#6a1b9a;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;\\">🔄倒走</span>";}' +
+            'else{revBtn="<button onclick=\\"window.toggleReversed(\'"+he(r.groupNo)+"\')\\" style=\\"margin-top:4px;width:100%;padding:3px 8px;background:#fff;color:#6a1b9a;border:1px solid #6a1b9a;border-radius:4px;cursor:pointer;font-size:12px;font-weight:700;\\">🔄 標記為倒走（D4,D5）</button>";}' +
           '}' +
-          'var rb=q.isReversed?"<span style=\\"background:#6a1b9a;color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;margin-left:6px;\\">🔄倒走</span>":"";' +
           'var stays=q.stayDates.map(function(sd,i){' +
             'var isC2=d.dateMap[sd]&&d.dateMap[sd].length>1;' +
             'return "<span style=\\""+(isC2?"color:#c62828;font-weight:800;":"color:#333;")+"\\">" +sd+"("+nightLabel(q.offsets[i])+")"+(isC2?" ⚠️":"")+"</span>";' +
@@ -700,6 +747,10 @@ if (!window.__erpDlListenerSet3) {
       'window.toggleReversed=function(gno){' +
         'if(getIsReversed(gno))localStorage.removeItem("erp_v3_rev_"+gno);' +
         'else localStorage.setItem("erp_v3_rev_"+gno,"1");' +
+        'rebuildUI();' +
+      '};' +
+      'window.setStayDay=function(gno,offset){' +
+        'try{localStorage.setItem("erp_v3_day_"+gno,String(offset));}catch(e){}' +
         'rebuildUI();' +
       '};' +
       '})();';
