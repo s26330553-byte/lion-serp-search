@@ -551,6 +551,7 @@ if (!window.__erpDlListenerSet3) {
     // ── client-side script（即時重算）────────────────────────────
     var toursJSON = JSON.stringify(TOURS.map(function(t){
       return { keyword:t.keyword, shortLabel:t.shortLabel, stayOffsets:t.stayOffsets,
+               defaultOffset:t.defaultOffset||null, selectableOffsets:t.selectableOffsets||null,
                reversedOffsets:t.reversedOffsets||null, color:t.color };
     }));
     var rowsJSON = JSON.stringify(slimRows);
