@@ -427,7 +427,7 @@ if (!window.__erpDlListenerSet3) {
                 var gnoHtml = '<span onclick="window.toggleReversed(\''+he(e.q.row.groupNo)+'\')" ' +
                   'style="font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);" ' +
                   'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>';
-                ctrlHtml = he(e.q.tour.shortLabel)+' '+nightLabel(e.q.offsets[0])+revLabel+' '+gnoHtml;
+                ctrlHtml = he(e.q.tour.shortLabel)+' '+e.nightLabel+revLabel+' '+gnoHtml;
               }
               inner += '<div style="font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;">'+ctrlHtml+'</div>';
             });
@@ -677,7 +677,7 @@ if (!window.__erpDlListenerSet3) {
                 '}else{' +
                   'var rvL=e.q.isReversed?"&nbsp;<span style=\\"background:rgba(255,255,255,.25);border-radius:3px;padding:0 3px;font-size:9px;\\">倒走</span>":"";' +
                   'var gnoH="<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:10px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>";' +
-                  'ctrlH=he(e.q.tour.shortLabel)+" "+nightLabel(e.q.offsets[0])+rvL+" "+gnoH;' +
+                  'ctrlH=he(e.q.tour.shortLabel)+" "+e.nightLabel+rvL+" "+gnoH;' +
                 '}' +
                 'inner2+="<div style=\\"font-size:10px;line-height:1.5;text-align:left;padding:0 2px;opacity:.95;\\">"+ctrlH+"</div>";' +
               '});' +
