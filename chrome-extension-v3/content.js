@@ -358,12 +358,12 @@ if (!window.__erpDlListenerSet3) {
       calMonths.forEach(function(cm) {
         var firstDay = new Date(cm.year, cm.month, 1).getDay();
         var daysInMonth = new Date(cm.year, cm.month + 1, 0).getDate();
-        html += '<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;">' +
+        html += '<div style="background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:420px;flex:1;">' +
           '<div style="text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;">' + cm.year + '年' + (cm.month+1) + '月</div>' +
           '<table style="width:100%;border-collapse:collapse;table-layout:fixed;"><thead><tr>';
         weekdays.forEach(function(wd, wi) {
-          var wc = wi===0?'#c62828':wi===6?'#1565c0':'#555';
-          html += '<th style="text-align:center;font-size:12px;padding:4px 0;color:'+wc+';">'+wd+'</th>';
+          var wc = wi===0?'#c62828':wi===6?'#1565c0':'#444';
+          html += '<th style="text-align:center;font-size:12px;padding:6px 0;color:'+wc+';background:#eef1f7;border-bottom:2px solid #d0d7e8;">'+wd+'</th>';
         });
         html += '</tr></thead><tbody><tr>';
         for (var di = 0; di < firstDay; di++) html += '<td></td>';
@@ -387,9 +387,21 @@ if (!window.__erpDlListenerSet3) {
             cellTitle = entries[0].q.tour.shortLabel+(entries[0].q.isReversed?'🔄':'')+'('+entries[0].nightLabel+') '+entries[0].q.row.groupNo;
           }
           var isToday = (cm.year===today.getFullYear()&&cm.month===today.getMonth()&&day===today.getDate());
-          var dayStyle = 'text-align:center;font-size:13px;padding:5px 2px;border-radius:6px;cursor:default;' +
-            'background:'+cellBg+';color:'+cellColor+';' + (isToday&&!hasOccupied?'font-weight:800;text-decoration:underline;':'') + (hasOccupied?'font-weight:700;':'');
-          html += '<td title="'+he(cellTitle)+'" style="'+dayStyle+'">'+day+(hasRev&&!isConflict?'<sup style="font-size:8px;">🔄</sup>':'')+'</td>';
+          var dayStyle = 'vertical-align:top;padding:4px 2px;border-radius:6px;cursor:default;' +
+            'background:'+cellBg+';color:'+cellColor+';';
+          var inner;
+          if (!hasOccupied) {
+            inner = '<div style="font-size:12px;text-align:center;'+(isToday?'font-weight:800;text-decoration:underline;':'')+'">'+day+'</div>';
+          } else {
+            inner = '<div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;">'+day+(isConflict?' ⚠️':'')+'</div>';
+            entries.forEach(function(e){
+              inner += '<div style="font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;">' +
+                he(e.q.tour.shortLabel)+(e.q.isReversed?'🔄':'')+' '+e.nightLabel+'<br>' +
+                '<span style="font-family:monospace;font-size:8px;">'+he(e.q.row.groupNo.split(' ')[0])+'</span>' +
+                '</div>';
+            });
+          }
+          html += '<td title="'+he(cellTitle)+'" style="'+dayStyle+'">'+inner+'</td>';
           col++;
           if (col%7===0 && day<daysInMonth) html += '</tr><tr>';
         }
@@ -581,12 +593,12 @@ if (!window.__erpDlListenerSet3) {
         '_calMonths.forEach(function(cm){' +
           'var firstDay=new Date(cm.year,cm.month,1).getDay();' +
           'var dim=new Date(cm.year,cm.month+1,0).getDate();' +
-          'html+="<div style=\\"background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:260px;\\">" +' +
+          'html+="<div style=\\"background:#fff;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,.1);min-width:420px;flex:1;\\">" +' +
             '"<div style=\\"text-align:center;font-weight:700;font-size:15px;margin-bottom:12px;color:#1a3a5c;\\">"+cm.year+"年"+(cm.month+1)+"月</div>" +' +
             '"<table style=\\"width:100%;border-collapse:collapse;table-layout:fixed;\\"><thead><tr>";' +
           'wds.forEach(function(wd,wi){' +
-            'var wc=wi===0?"#c62828":wi===6?"#1565c0":"#555";' +
-            'html+="<th style=\\"text-align:center;font-size:12px;padding:4px 0;color:"+wc+";\\">"+wd+"</th>";' +
+            'var wc=wi===0?"#c62828":wi===6?"#1565c0":"#444";' +
+            'html+="<th style=\\"text-align:center;font-size:12px;padding:6px 0;color:"+wc+";background:#eef1f7;border-bottom:2px solid #d0d7e8;\\">"+wd+"</th>";' +
           '});' +
           'html+="</tr></thead><tbody><tr>";' +
           'for(var di=0;di<firstDay;di++)html+="<td></td>";' +
@@ -602,8 +614,19 @@ if (!window.__erpDlListenerSet3) {
             'else if(allF){cellBg="#2e7d32";cellColor="#fff";cellTitle=entries[0].q.tour.shortLabel+(entries[0].q.isReversed?"🔄":"")+"("+entries[0].nightLabel+") "+entries[0].q.row.groupNo;}' +
             'else if(hasO){cellBg="#1565c0";cellColor="#fff";cellTitle=entries[0].q.tour.shortLabel+(entries[0].q.isReversed?"🔄":"")+"("+entries[0].nightLabel+") "+entries[0].q.row.groupNo;}' +
             'var isTod=(cm.year===_today.getFullYear()&&cm.month===_today.getMonth()&&day===_today.getDate());' +
-            'var ds2="text-align:center;font-size:13px;padding:5px 2px;border-radius:6px;cursor:default;background:"+cellBg+";color:"+cellColor+";"+(isTod&&!hasO?"font-weight:800;text-decoration:underline;":"")+(hasO?"font-weight:700;":"");' +
-            'html+="<td title=\\""+he(cellTitle)+"\\" style=\\""+ds2+"\\">"+day+(hasR&&!isC?"<sup style=\\"font-size:8px;\\">🔄</sup>":"")+"</td>";' +
+            'var ds2="vertical-align:top;padding:4px 2px;border-radius:6px;cursor:default;background:"+cellBg+";color:"+cellColor+";";' +
+            'var inner2;' +
+            'if(!hasO){inner2="<div style=\\"font-size:12px;text-align:center;"+(isTod?"font-weight:800;text-decoration:underline;":"")+"\\">" +day+"</div>";}' +
+            'else{' +
+              'inner2="<div style=\\"font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;\\">"+day+(isC?" ⚠️":"")+"</div>";' +
+              'entries.forEach(function(e){' +
+                'inner2+="<div style=\\"font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;\\">" +' +
+                  'he(e.q.tour.shortLabel)+(e.q.isReversed?"🔄":"")+" "+e.nightLabel+"<br>" +' +
+                  '"<span style=\\"font-family:monospace;font-size:8px;\\">"+he(e.q.row.groupNo.split(" ")[0])+"</span>" +' +
+                  '"</div>";' +
+              '});' +
+            '}' +
+            'html+="<td title=\\""+he(cellTitle)+"\\" style=\\""+ds2+"\\">"+inner2+"</td>";' +
             'col++;' +
             'if(col%7===0&&day<dim)html+="</tr><tr>";' +
           '}' +
