@@ -261,14 +261,6 @@ if (!window.__erpDlListenerSet3) {
 
     var today = new Date();
 
-    // ── 月曆月份清單（今月起 6 個月）────────────────────────────
-    var calMonths = [];
-    for (var mi = 0; mi < 6; mi++) {
-      var yr = today.getFullYear(), mo = today.getMonth() + mi;
-      if (mo > 11) { yr++; mo -= 12; }
-      calMonths.push({ year:yr, month:mo });
-    }
-
     // ── 精簡 allRows 供 client 使用（去掉不需要的欄位）──────────
     var slimRows = allRows.map(function(r) {
       return { groupNo:r.groupNo, teamName:r.teamName, airline:r.airline,
@@ -353,6 +345,15 @@ if (!window.__erpDlListenerSet3) {
     }
 
     function renderCalendar(d) {
+      // 從 dateMap 推導出有入住的月份
+      var moMap = {};
+      Object.keys(d.dateMap).forEach(function(ds) {
+        var p = ds.split('/');
+        var key = p[0] + '/' + p[1];
+        if (!moMap[key]) moMap[key] = { year: parseInt(p[0], 10), month: parseInt(p[1], 10) - 1 };
+      });
+      var calMonths = Object.keys(moMap).sort().map(function(k) { return moMap[k]; });
+      if (!calMonths.length) return '<div style="color:#999;padding:16px;">（無入住資料）</div>';
       var weekdays = ['日','一','二','三','四','五','六'];
       var html = '<div style="display:flex;flex-direction:column;gap:24px;">';
       calMonths.forEach(function(cm) {
@@ -518,14 +519,12 @@ if (!window.__erpDlListenerSet3) {
                reversedOffsets:t.reversedOffsets||null, color:t.color };
     }));
     var rowsJSON = JSON.stringify(slimRows);
-    var calJSON  = JSON.stringify(calMonths);
     var todayTS  = today.getTime();
 
     var clientScript =
       '(function(){' +
       'var _rows=' + rowsJSON + ';' +
       'var _TOURS=' + toursJSON + ';' +
-      'var _calMonths=' + calJSON + ';' +
       'var _today=new Date(' + todayTS + ');' +
       'function he(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}' +
       'function addDays(d,n){var x=new Date(d.getTime());x.setDate(x.getDate()+n);return x;}' +
@@ -594,9 +593,13 @@ if (!window.__erpDlListenerSet3) {
         'return html;' +
       '}' +
       'function renderCalendar(d){' +
+        'var moMap={};' +
+        'Object.keys(d.dateMap).forEach(function(ds){var p=ds.split("/");var k=p[0]+"/"+p[1];if(!moMap[k])moMap[k]={year:parseInt(p[0],10),month:parseInt(p[1],10)-1};});' +
+        'var calMonths=Object.keys(moMap).sort().map(function(k){return moMap[k];});' +
+        'if(!calMonths.length)return "<div style=\\"color:#999;padding:16px;\\">（無入住資料）</div>";' +
         'var wds=["日","一","二","三","四","五","六"];' +
         'var html="<div style=\\"display:flex;flex-direction:column;gap:24px;\\">";' +
-        '_calMonths.forEach(function(cm){' +
+        'calMonths.forEach(function(cm){' +
           'var firstDay=new Date(cm.year,cm.month,1).getDay();' +
           'var dim=new Date(cm.year,cm.month+1,0).getDate();' +
           'html+="<div style=\\"background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 1px 4px rgba(0,0,0,.1);width:100%;box-sizing:border-box;\\">" +' +
