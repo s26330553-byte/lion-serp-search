@@ -5,14 +5,14 @@
 var TOURS = [
   {
     keyword:        '花戀北海道花火美瑛',
-    shortLabel:     '花戀花火美瑛',
+    shortLabel:     '特選花戀',
     stayOffsets:    [2],          // 出發日 +2 = 第3天入住
     reversedOffsets: null,        // 無倒走版本
     color:          '#1565c0'
   },
   {
     keyword:        '北海道美瑛螃蟹',
-    shortLabel:     '美瑛螃蟹',
+    shortLabel:     '限定PLUS',
     stayOffsets:    [0, 1],       // 正走：出發日 +0,+1 = 第1,2天
     reversedOffsets: [3, 4],      // 倒走：出發日 +3,+4 = 第4,5天
     color:          '#6a1b9a'
