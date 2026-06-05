@@ -395,10 +395,16 @@ if (!window.__erpDlListenerSet3) {
           } else {
             inner = '<div style="font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;">'+day+(isConflict?' ⚠️':'')+'</div>';
             entries.forEach(function(e){
+              var gno = e.q.row.groupNo.split(' ')[0];
+              var canToggle = !!e.q.tour.reversedOffsets;
+              var gnoHtml = canToggle
+                ? '<span onclick="window.toggleReversed(\''+he(e.q.row.groupNo)+'\')" ' +
+                  'style="font-family:monospace;font-size:8px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);" ' +
+                  'title="點此切換倒走">'+he(gno)+(e.q.isReversed?' ↩️':' 🔄')+'</span>'
+                : '<span style="font-family:monospace;font-size:8px;">'+he(gno)+'</span>';
               inner += '<div style="font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;">' +
                 he(e.q.tour.shortLabel)+(e.q.isReversed?'🔄':'')+' '+e.nightLabel+'<br>' +
-                '<span style="font-family:monospace;font-size:8px;">'+he(e.q.row.groupNo.split(' ')[0])+'</span>' +
-                '</div>';
+                gnoHtml + '</div>';
             });
           }
           html += '<td title="'+he(cellTitle)+'" style="'+dayStyle+'">'+inner+'</td>';
@@ -620,10 +626,14 @@ if (!window.__erpDlListenerSet3) {
             'else{' +
               'inner2="<div style=\\"font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;\\">"+day+(isC?" ⚠️":"")+"</div>";' +
               'entries.forEach(function(e){' +
+                'var gno2=e.q.row.groupNo.split(" ")[0];' +
+                'var canT=!!e.q.tour.reversedOffsets;' +
+                'var gnoH=canT' +
+                  '?"<span onclick=\\"window.toggleReversed(\'"+he(e.q.row.groupNo)+"\')\\" style=\\"font-family:monospace;font-size:8px;cursor:pointer;border-bottom:1px dotted rgba(255,255,255,.7);\\" title=\\"點此切換倒走\\">"+he(gno2)+(e.q.isReversed?" ↩️":" 🔄")+"</span>"' +
+                  ':"<span style=\\"font-family:monospace;font-size:8px;\\">"+he(gno2)+"</span>";' +
                 'inner2+="<div style=\\"font-size:8px;line-height:1.4;text-align:left;padding:0 1px;opacity:.95;\\">" +' +
                   'he(e.q.tour.shortLabel)+(e.q.isReversed?"🔄":"")+" "+e.nightLabel+"<br>" +' +
-                  '"<span style=\\"font-family:monospace;font-size:8px;\\">"+he(e.q.row.groupNo.split(" ")[0])+"</span>" +' +
-                  '"</div>";' +
+                  'gnoH+"</div>";' +
               '});' +
             '}' +
             'html+="<td title=\\""+he(cellTitle)+"\\" style=\\""+ds2+"\\">"+inner2+"</td>";' +
