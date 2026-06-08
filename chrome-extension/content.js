@@ -366,18 +366,17 @@ if (!window.__erpDlListenerSet) {
 
     // ── 篩選邏輯 ──────────────────────────────────────────────
     // 特別警示：備註含全形＊（無現成機位），不論即將成團或已成團
-    // 條件：有＊ AND KK >= 10 AND 排除 NJ / TKT
+    // 條件：有＊ AND（KK >= 10 OR HK+KK > 15）AND 排除 NJ / TKT
     var noSeats = rows.filter(function (r) {
       if (!hasAst(r)) return false;
       if (r.orderType.indexOf('TKT') >= 0) return false;
       if (r.remark.indexOf('NJ') >= 0) return false;
-      if (r.kk < 10) return false;
-      return true;
+      return r.kk >= 10 || (r.hk + r.kk) > 15;
     });
 
-    // 即將成團：KK >= 10，排除已成團、NJ、TKT、以及已在特別警示的（避免重複）
+    // 即將成團：（KK >= 10 OR HK+KK > 15），排除已成團、NJ、TKT、以及已在特別警示的（避免重複）
     var formingAll = rows.filter(function (r) {
-      return r.kk >= 10
+      return (r.kk >= 10 || (r.hk + r.kk) > 15)
         && r.remark.indexOf('成團') < 0
         && r.remark.indexOf('NJ') < 0
         && r.orderType.indexOf('TKT') < 0;
