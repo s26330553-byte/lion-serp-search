@@ -600,13 +600,33 @@ if (!window.__erpDlListenerSet) {
       var result = [];
       Object.keys(groups).forEach(function (key) {
         var g = groups[key];
-        var formed  = g.rows.filter(function (r) { return r.remark.indexOf('成團') >= 0; });
+        var formed = g.rows.filter(function (r) { return r.remark.indexOf('成團') >= 0; });
         if (!formed.length) return;
-        var flagged = g.rows.filter(function (r) {
+        var nonFormed = g.rows.filter(function (r) {
           return r.remark.indexOf('成團') < 0 && !hasAst(r);
         });
+        if (!nonFormed.length) return;
+
+        // 找實際機位數（備註含半形 *數字，例如 *64）
+        var capacity = null;
+        g.rows.forEach(function (r) {
+          if (capacity !== null) return;
+          var m = r.remark.match(/\*(\d+)/);
+          if (m) capacity = parseInt(m[1], 10);
+        });
+
+        var flagged, remaining = null;
+        if (capacity !== null) {
+          // 有實際機位：計算剩餘，只標示 團位 > 剩餘 的團
+          var totalUsed = formed.reduce(function (s, r) { return s + r.totalSeats; }, 0);
+          remaining = capacity - totalUsed;
+          flagged = nonFormed.filter(function (r) { return r.totalSeats > remaining; });
+        } else {
+          // 無實際機位資訊：原邏輯，全部非成團非＊皆標
+          flagged = nonFormed;
+        }
         if (!flagged.length) return;
-        result.push({ dep: g.dep, flight: g.flight, formed: formed, flagged: flagged });
+        result.push({ dep: g.dep, flight: g.flight, formed: formed, flagged: flagged, capacity: capacity, remaining: remaining });
       });
       result.sort(function (a, b) {
         return departureSortKey(a.flagged[0].groupNo) - departureSortKey(b.flagged[0].groupNo);
@@ -735,6 +755,7 @@ if (!window.__erpDlListenerSet) {
           '<td style="font-family:monospace;white-space:nowrap">' + r.groupNo.split(' ')[0] + '</td>' +
           '<td><span class="al al' + r.airline + '">' + r.airline + '</span></td>' +
           '<td class="rm">' + rmk + '</td>' +
+          '<td style="text-align:center">' + r.totalSeats + '</td>' +
           '<td style="text-align:center">' + r.hk + '</td>' +
           '<td style="text-align:center">' + r.kk + '</td>' +
           '<td style="text-align:center;font-weight:700">' + hkk + '</td>' +
@@ -745,9 +766,14 @@ if (!window.__erpDlListenerSet) {
 
       var tbody = '';
       missingAstGroups.forEach(function (g) {
-        // 群組標題列
-        tbody += '<tr><td colspan="8" style="background:#b2dfdb;font-weight:700;color:#004d40;padding:7px 14px;">' +
-          '📅 ' + g.dep + '　' + g.flight + '　（此航班已有團成團，以下尚未標注＊）</td></tr>';
+        // 群組標題列：有 *數字 時顯示機位計算
+        var capInfo = '';
+        if (g.capacity !== null) {
+          var used = g.formed.reduce(function (s, r) { return s + r.totalSeats; }, 0);
+          capInfo = '　｜　機位 ' + g.capacity + '　成團已用 ' + used + '　剩餘 ' + g.remaining;
+        }
+        tbody += '<tr><td colspan="9" style="background:#b2dfdb;font-weight:700;color:#004d40;padding:7px 14px;">' +
+          '📅 ' + g.dep + '　' + g.flight + capInfo + '　（以下應標＊）</td></tr>';
         // 成團列（綠色，作為 context）
         g.formed.forEach(function (r) {
           tbody += mkGroupRow(r, 'ctx', '✅ 成團', '#2e7d32');
@@ -761,7 +787,7 @@ if (!window.__erpDlListenerSet) {
       return header +
         '<table><thead><tr>' +
         '<th>團號</th><th>航空</th><th>團控說明</th>' +
-        '<th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th><th>狀態</th>' +
+        '<th>團位</th><th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th><th>狀態</th>' +
         '</tr></thead><tbody>' + tbody + '</tbody></table></details>';
     }
 
