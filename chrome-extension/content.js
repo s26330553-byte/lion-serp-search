@@ -593,8 +593,8 @@ if (!window.__erpDlListenerSet) {
         if (r.orderType.indexOf('TKT') >= 0) return;
         var dep = fmtDepDate(r.groupNo);
         if (dep === '?') return;
-        var key = dep + '|' + getFlightNo(r);
-        if (!groups[key]) groups[key] = { dep: dep, flight: getFlightNo(r), rows: [] };
+        var key = dep + '|' + getFlightNo(r) + '|' + r.days;
+        if (!groups[key]) groups[key] = { dep: dep, flight: getFlightNo(r), days: r.days, rows: [] };
         groups[key].rows.push(r);
       });
       var result = [];
@@ -778,7 +778,7 @@ if (!window.__erpDlListenerSet) {
           capInfo = '　｜　機位 ' + g.capacity + '　成團已用 ' + used + '　剩餘 ' + g.remaining;
         }
         tbody += '<tr><td colspan="9" style="background:#b2dfdb;font-weight:700;color:#004d40;padding:7px 14px;">' +
-          '📅 ' + g.dep + '　' + g.flight + capInfo + '　（以下應標＊）</td></tr>';
+          '📅 ' + g.dep + '　' + g.flight + '　' + g.days + '天' + capInfo + '　（以下應標＊）</td></tr>';
         // 成團列（綠色，作為 context）
         g.formed.forEach(function (r) {
           tbody += mkGroupRow(r, 'ctx', '✅ 成團', '#2e7d32');
