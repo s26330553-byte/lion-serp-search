@@ -585,6 +585,36 @@ if (!window.__erpDlListenerSet) {
       return '';
     }
 
+    // ── 疑似漏標＊：同出發日+航班，有成團的群組中，其他未標＊的團 ──
+    var missingAstGroups = (function () {
+      var groups = {};
+      rows.forEach(function (r) {
+        if (r.remark.indexOf('NJ') >= 0) return;
+        if (r.orderType.indexOf('TKT') >= 0) return;
+        var dep = fmtDepDate(r.groupNo);
+        if (dep === '?') return;
+        var key = dep + '|' + getFlightNo(r);
+        if (!groups[key]) groups[key] = { dep: dep, flight: getFlightNo(r), rows: [] };
+        groups[key].rows.push(r);
+      });
+      var result = [];
+      Object.keys(groups).forEach(function (key) {
+        var g = groups[key];
+        var formed  = g.rows.filter(function (r) { return r.remark.indexOf('成團') >= 0; });
+        if (!formed.length) return;
+        var flagged = g.rows.filter(function (r) {
+          return r.remark.indexOf('成團') < 0 && !hasAst(r);
+        });
+        if (!flagged.length) return;
+        result.push({ dep: g.dep, flight: g.flight, formed: formed, flagged: flagged });
+      });
+      result.sort(function (a, b) {
+        return departureSortKey(a.flagged[0].groupNo) - departureSortKey(b.flagged[0].groupNo);
+      });
+      return result;
+    })();
+    var missingAstCount = missingAstGroups.reduce(function (n, g) { return n + g.flagged.length; }, 0);
+
     var css =
       '* { box-sizing: border-box; margin: 0; padding: 0; }' +
       'body { font-family: Segoe UI, system-ui, sans-serif; background: #f0f2f5; color: #222; }' +
@@ -622,6 +652,10 @@ if (!window.__erpDlListenerSet) {
       '.hkk { font-weight: 700; }' +
       '.hi  { color: #e53935; font-weight: 800; }' +
       '.neg { color: #e53935; font-weight: 800; }' +
+      'tbody tr.ctx td { background: #e8f5e9; }' +
+      'tbody tr.ctx:hover td { background: #c8e6c9; }' +
+      'tbody tr.flag td { background: #fff8e1; }' +
+      'tbody tr.flag:hover td { background: #ffecb3; }' +
       'details { cursor: default; }' +
       'details summary { cursor: pointer; user-select: none; }';
 
@@ -677,6 +711,58 @@ if (!window.__erpDlListenerSet) {
         '</div></summary>' +
         mkTable(list) +
         '</details>';
+    }
+
+    // ── 疑似漏標＊ 專屬渲染（分組 + 雙色列） ─────────────────────
+    function mkMissingAstSection() {
+      var color = '#00695c';
+      var header =
+        '<details class="sec-details" open>' +
+        '<summary><div class="sh" style="border-left:4px solid ' + color + ';color:' + color + '">' +
+        '<h2>🔍 疑似漏標＊（同航班已成團，其他團尚未標注）</h2>' +
+        '<span class="badge" style="background:' + color + '">' + missingAstCount + '</span>' +
+        '<span class="sec-toggle">▼</span>' +
+        '</div></summary>';
+
+      if (!missingAstGroups.length) {
+        return header + '<div class="empty">目前無符合條件的團體 ✓</div></details>';
+      }
+
+      function mkGroupRow(r, cls, statusLabel, statusColor) {
+        var hkk = r.hk + r.kk;
+        var rmk = r.remark.replace(/＊/g, '<span class="ast">＊</span>');
+        return '<tr class="' + cls + '">' +
+          '<td style="font-family:monospace;white-space:nowrap">' + r.groupNo.split(' ')[0] + '</td>' +
+          '<td><span class="al al' + r.airline + '">' + r.airline + '</span></td>' +
+          '<td class="rm">' + rmk + '</td>' +
+          '<td style="text-align:center">' + r.hk + '</td>' +
+          '<td style="text-align:center">' + r.kk + '</td>' +
+          '<td style="text-align:center;font-weight:700">' + hkk + '</td>' +
+          '<td style="text-align:center' + (r.available < 0 ? ';color:#e53935;font-weight:800' : '') + '">' + r.available + '</td>' +
+          '<td style="font-weight:700;color:' + statusColor + '">' + statusLabel + '</td>' +
+          '</tr>';
+      }
+
+      var tbody = '';
+      missingAstGroups.forEach(function (g) {
+        // 群組標題列
+        tbody += '<tr><td colspan="8" style="background:#b2dfdb;font-weight:700;color:#004d40;padding:7px 14px;">' +
+          '📅 ' + g.dep + '　' + g.flight + '　（此航班已有團成團，以下尚未標注＊）</td></tr>';
+        // 成團列（綠色，作為 context）
+        g.formed.forEach(function (r) {
+          tbody += mkGroupRow(r, 'ctx', '✅ 成團', '#2e7d32');
+        });
+        // 疑似漏標列（琥珀色）
+        g.flagged.forEach(function (r) {
+          tbody += mkGroupRow(r, 'flag', '⚠ 應標＊', '#e65100');
+        });
+      });
+
+      return header +
+        '<table><thead><tr>' +
+        '<th>團號</th><th>航空</th><th>團控說明</th>' +
+        '<th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th><th>狀態</th>' +
+        '</tr></thead><tbody>' + tbody + '</tbody></table></details>';
     }
 
     // ── 機位需求簡訊（可直接複製貼到 LINE） ──────────────────────
@@ -931,7 +1017,8 @@ if (!window.__erpDlListenerSet) {
       { n: forming.length,         l: '即將成團',       c: '#f57c00' },
       { n: tightSeats.length,      l: '成團・可賣不足', c: '#6a1b9a' },
       { n: overSold.length,        l: '🔴 超賣',        c: '#b71c1c' },
-      { n: tooReserved.length,     l: '📌 保留太多',    c: '#0277bd' }
+      { n: tooReserved.length,     l: '📌 保留太多',    c: '#0277bd' },
+      { n: missingAstCount,        l: '🔍 疑似漏標＊',  c: '#00695c' }
     ];
     var statsHtml = statItems.map(function (s) {
       return '<div class="stat"><div class="sn" style="color:' + s.c + '">' + s.n +
@@ -972,6 +1059,7 @@ if (!window.__erpDlListenerSet) {
                 '#b71c1c', overSold) +
       mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
                 '#0277bd', tooReserved) +
+      mkMissingAstSection() +
       mkSummaryMsg() +
       colDetectHtml +
       '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
