@@ -603,7 +603,12 @@ if (!window.__erpDlListenerSet) {
         var formed = g.rows.filter(function (r) { return r.remark.indexOf('成團') >= 0; });
         if (!formed.length) return;
         var nonFormed = g.rows.filter(function (r) {
-          return r.remark.indexOf('成團') < 0 && !hasAst(r);
+          if (r.remark.indexOf('成團') >= 0) return false;
+          if (hasAst(r)) return false;
+          // 旗艦產品預設無現成機位，不需標注檢核
+          var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
+          if (tn.indexOf('旗艦') >= 0) return false;
+          return true;
         });
         if (!nonFormed.length) return;
 
