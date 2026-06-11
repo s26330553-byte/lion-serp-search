@@ -631,7 +631,7 @@ if (!window.__erpDlListenerSet) {
           flagged = nonFormed;
         }
         if (!flagged.length) return;
-        result.push({ dep: g.dep, flight: g.flight, formed: formed, flagged: flagged, capacity: capacity, remaining: remaining });
+        result.push({ dep: g.dep, flight: g.flight, days: g.days, formed: formed, flagged: flagged, capacity: capacity, remaining: remaining });
       });
       result.sort(function (a, b) {
         return departureSortKey(a.flagged[0].groupNo) - departureSortKey(b.flagged[0].groupNo);
