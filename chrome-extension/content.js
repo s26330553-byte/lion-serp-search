@@ -326,18 +326,26 @@ if (!window.__erpDlListenerSet) {
     // ── 輸出報告 ────────────────────────────────────────────────
     var reportHTML = buildReport(allRows, colMap);
 
-    if (reportWin && !reportWin.closed) {
-      try {
-        reportWin.document.open();
-        reportWin.document.write(reportHTML);
-        reportWin.document.close();
-        reportWin.focus();
-      } catch (e) {
-        downloadReport(reportHTML);
+    function _writeReport(html, autoSync) {
+      var inject = autoSync ? '<script>window.__erpAutoSync=true;<\/script>' : '';
+      var finalHTML = inject + html;
+      if (reportWin && !reportWin.closed) {
+        try {
+          reportWin.document.open();
+          reportWin.document.write(finalHTML);
+          reportWin.document.close();
+          reportWin.focus();
+        } catch (e) {
+          downloadReport(html);
+        }
+      } else {
+        downloadReport(html);
       }
-    } else {
-      downloadReport(reportHTML);
     }
+
+    // 讀 sync-bridge.js（ISOLATED world）透過 data 屬性傳過來的設定
+    var autoSync = document.documentElement.dataset.erpAutoSync === '1';
+    _writeReport(reportHTML, autoSync);
   })();
 
   function downloadReport(html) {
@@ -427,6 +435,14 @@ if (!window.__erpDlListenerSet) {
     // 保留太多：保留 > 0 且 可賣 <= 6
     var tooReserved = rows.filter(function (r) {
       return r.reserved > 0 && r.available <= 6;
+    });
+
+    // 建議漲價：標準團名含「秒殺」或「省最大」，已成團，HK+KK >= 15
+    var priceUp = rows.filter(function (r) {
+      var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
+      if (tn.indexOf('秒殺') < 0 && tn.indexOf('省最大') < 0) return false;
+      if (r.remark.indexOf('成團') < 0) return false;
+      return (r.hk + r.kk) >= 15;
     });
 
     var byAirline = {};
@@ -1049,12 +1065,170 @@ if (!window.__erpDlListenerSet) {
       { n: tightSeats.length,      l: '成團・可賣不足', c: '#6a1b9a' },
       { n: overSold.length,        l: '🔴 超賣',        c: '#b71c1c' },
       { n: tooReserved.length,     l: '📌 保留太多',    c: '#0277bd' },
-      { n: missingAstCount,        l: '🔍 疑似漏標＊',  c: '#00695c' }
+      { n: missingAstCount,        l: '🔍 疑似漏標＊',  c: '#00695c' },
+      { n: priceUp.length,         l: '💰 建議漲價',     c: '#2e7d32' }
     ];
     var statsHtml = statItems.map(function (s) {
       return '<div class="stat"><div class="sn" style="color:' + s.c + '">' + s.n +
              '</div><div class="sl">' + s.l + '</div></div>';
     }).join('');
+
+    // ── 匯入至北海道機位管理系統 ──────────────────────────────
+    function buildSyncButton(rows) {
+      var WORKER_SYNC_URL = 'https://line-webhook.ericlin-line.workers.dev/sync-seats?secret=eric-line-63940';
+      // 第一步：按 date+flight+days 把所有 row 收集起來
+      // 排除：＊（無現成機位）、NJ、TKT、旗艦（高價概念團，另行管理）
+      var buckets = {};
+      rows.filter(function(r) {
+        var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
+        return r.remark.indexOf('＊') < 0
+            && r.remark.indexOf('NJ') < 0
+            && r.orderType.indexOf('TKT') < 0
+            && tn.indexOf('旗艦') < 0;
+      }).forEach(function(r) {
+        var depDate = departureDateObj(r.groupNo);
+        if (!depDate) return;
+        var fn   = getFlightNo(r);
+        var days = r.days || 0;
+        var key  = depDate + '_' + fn + '_' + days;
+        if (!buckets[key]) buckets[key] = { date: depDate, flight_no: fn, days: days, rows: [] };
+        buckets[key].rows.push(r);
+      });
+
+      // 第二步：計算每個 bucket 的原始/已用席
+      var items = Object.values(buckets).map(function(it) {
+        var brows = it.rows;
+        var maxReserved = brows.reduce(function(m, r) { return Math.max(m, r.reserved || 0); }, 0);
+        var used_seats  = brows.reduce(function(s, r) { return s + (r.hk || 0) + (r.kk || 0); }, 0);
+        var original_seats = 0;
+
+        // Step 1：備註含半形 *數字 → 直接採用為實際機位（最可靠）
+        var capacityFromRemark = null;
+        brows.forEach(function(r) {
+          if (capacityFromRemark !== null) return;
+          var m = r.remark.match(/\*(\d+)/);
+          if (m) capacityFromRemark = parseInt(m[1], 10);
+        });
+
+        if (capacityFromRemark !== null) {
+          original_seats = capacityFromRemark;
+        } else {
+          // Step 2：從 totalSeats 結構推算
+          var seatValues = brows.map(function(r) { return r.totalSeats || 0; });
+          var allSame    = seatValues.every(function(v) { return v === seatValues[0]; });
+          var isShared   = brows.length > 1 && maxReserved === 0 && allSame;
+
+          if (isShared) {
+            // 純共賣（無保留）：席數只算一次
+            original_seats = seatValues[0];
+          } else {
+            // 找主控團（有保留席的那筆）
+            var mainRows = brows.filter(function(r) { return (r.reserved || 0) > 0; });
+            var mainTotalSeats = mainRows.length > 0 ? (mainRows[0].totalSeats || 0) : 0;
+            // 高保留（≥80%）：JX850 模式，子團顯示同池大小
+            // 低保留（<80%）：員工團模式，子團佔用保留額度
+            var highReserve = mainTotalSeats > 0 && maxReserved >= mainTotalSeats * 0.8;
+
+            brows.forEach(function(r) {
+              if ((r.reserved || 0) > 0) {
+                original_seats += (r.totalSeats || 0);
+              } else {
+                var isSubGroup;
+                if (mainRows.length > 0) {
+                  isSubGroup = highReserve
+                    ? (r.totalSeats || 0) === mainTotalSeats
+                    : (r.totalSeats || 0) <= maxReserved;
+                } else {
+                  isSubGroup = false;
+                }
+                if (!isSubGroup) original_seats += (r.totalSeats || 0);
+              }
+            });
+          }
+        }
+        return {
+          date: it.date, flight_no: it.flight_no, days: it.days,
+          original_seats: original_seats, current_seats: original_seats,
+          used_seats: used_seats, type: 'SRS',
+          note: it.days + '天|ERP同步(' + brows.length + '組)',
+        };
+      });
+      var previewRows = items.slice(0, 10).map(function(it) {
+        return '<tr><td style="padding:3px 8px">' + it.date + '</td>' +
+               '<td style="padding:3px 8px;font-weight:bold">' + it.flight_no + '</td>' +
+               '<td style="padding:3px 8px;text-align:center">' + it.days + '天</td>' +
+               '<td style="padding:3px 8px;text-align:right">' + it.original_seats + '</td>' +
+               '<td style="padding:3px 8px;text-align:right">' + it.used_seats + '</td>' +
+               '<td style="padding:3px 8px;text-align:right">' + (it.original_seats - it.used_seats) + '</td>' +
+               '<td style="padding:3px 8px;color:#888;font-size:11px">' + it.groups + '組</td></tr>';
+      }).join('');
+      var itemsJson = JSON.stringify(items).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      return '<div style="margin:24px auto;max-width:860px;padding:20px;background:#e8f5e9;border:2px solid #4caf50;border-radius:10px">' +
+        '<h3 style="margin:0 0 12px;color:#2e7d32">📥 匯入至北海道機位管理系統</h3>' +
+        '<p style="color:#555;font-size:13px;margin:0 0 12px">共 <strong>' + items.length + '</strong> 筆（同日同航班同天數合併）</p>' +
+        '<table style="width:100%;border-collapse:collapse;font-size:13px;background:white;border-radius:6px;overflow:hidden">' +
+        '<thead><tr style="background:#c8e6c9"><th style="padding:4px 8px;text-align:left">出發日</th>' +
+        '<th style="padding:4px 8px;text-align:left">航班</th><th style="padding:4px 8px;text-align:center">天數</th><th style="padding:4px 8px;text-align:right">總位</th>' +
+        '<th style="padding:4px 8px;text-align:right">已用(HK+KK)</th><th style="padding:4px 8px;text-align:right">可售</th>' +
+        '<th style="padding:4px 8px;text-align:right">組數</th></tr></thead><tbody>' + previewRows + '</tbody></table>' +
+        (items.length > 10 ? '<p style="color:#888;font-size:12px;margin:6px 0 0">…另有 ' + (items.length - 10) + ' 筆</p>' : '') +
+        '<div style="margin-top:14px;display:flex;gap:10px;align-items:center">' +
+        '<button id="erp-sync-btn" style="padding:10px 24px;background:#388e3c;color:white;border:none;border-radius:6px;font-size:14px;font-weight:bold;cursor:pointer">✅ 確認匯入 Sheet</button>' +
+        '<span id="erp-sync-status" style="font-size:13px;color:#555"></span>' +
+        '</div></div>' +
+        '<script>(function(){' +
+        'var SYNC_URL=' + JSON.stringify(WORKER_SYNC_URL) + ';' +
+        'var NOTIFY_URL="https://line-webhook.ericlin-line.workers.dev/notify-sync?secret=eric-line-63940";' +
+        'var allItems=' + itemsJson + ';' +
+        // 每批 50 筆，避免 GAS 單次處理超時（Cloudflare 524）
+        'var BATCH=20;' +
+        'var chunks=[];' +
+        'for(var _i=0;_i<allItems.length;_i+=BATCH){chunks.push(allItems.slice(_i,_i+BATCH));}' +
+        'var btn=document.getElementById("erp-sync-btn");' +
+        'var st=document.getElementById("erp-sync-status");' +
+        'if(!btn)return;' +
+        'function doSync(){' +
+        '  btn.disabled=true;btn.textContent="匯入中…";st.textContent="";' +
+        '  var cr=0,up=0,errs=[];var ci=0;' +
+        '  function next(){' +
+        '    if(ci>=chunks.length){' +
+        '      btn.textContent="✔ 匯入完成";' +
+        '      st.textContent="新增 "+cr+" 筆，更新 "+up+" 筆（共 "+(cr+up)+" 筆）";' +
+        '      var total=cr+up;' +
+        '      if(window.opener){window.opener.postMessage({type:"erpSync",created:cr,updated:up,total:total,errors:errs},"*");}' +
+        '      fetch(NOTIFY_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({created:cr,updated:up,total:total,errors:errs})}).catch(function(){});' +
+        '      return;' +
+        '    }' +
+        '    st.textContent="第 "+(ci+1)+" / "+chunks.length+" 批…";' +
+        '    fetch(SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:chunks[ci]})})' +
+        '    .then(function(r){return r.json();})' +
+        '    .then(function(d){' +
+        '      if(d.error){st.textContent="❌ 第"+(ci+1)+"批錯誤："+d.error;btn.disabled=false;btn.textContent="✅ 確認匯入 Sheet";return;}' +
+        '      cr+=(d.created||0);up+=(d.updated||0);errs=errs.concat(d.errors||[]);' +
+        '      ci++;next();' +
+        '    })' +
+        '    .catch(function(e){st.textContent="❌ 網路錯誤："+e.message;btn.disabled=false;btn.textContent="✅ 確認匯入 Sheet";});' +
+        '  }' +
+        '  next();' +
+        '}' +
+        'btn.onclick=doSync;' +
+        'if(window.__erpAutoSync){' +
+        '  var cd=3;' +
+        '  var cdEl=document.createElement("span");cdEl.style="font-size:12px;color:#2563eb;margin-left:8px";' +
+        '  btn.parentNode.appendChild(cdEl);' +
+        '  var iv=setInterval(function(){' +
+        '    if(cd<=0){clearInterval(iv);cdEl.remove();doSync();return;}' +
+        '    cdEl.textContent="（"+cd+"秒後自動同步，點取消可停止）";' +
+        '    cd--;' +
+        '  },1000);' +
+        '  var cancelBtn=document.createElement("button");' +
+        '  cancelBtn.textContent="取消自動同步";' +
+        '  cancelBtn.style="margin-left:8px;font-size:12px;color:#dc2626;background:none;border:none;cursor:pointer;text-decoration:underline";' +
+        '  cancelBtn.onclick=function(){clearInterval(iv);cdEl.remove();cancelBtn.remove();};' +
+        '  btn.parentNode.appendChild(cancelBtn);' +
+        '}' +
+        '})();<\/script>';
+    }
 
     return '<!DOCTYPE html><html lang="zh-TW"><head>' +
       '<meta charset="UTF-8">' +
@@ -1090,9 +1264,12 @@ if (!window.__erpDlListenerSet) {
                 '#b71c1c', overSold) +
       mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
                 '#0277bd', tooReserved) +
+      mkSection('💰 建議漲價（秒殺／省最大・已成團・HK+KK ≥ 15）',
+                '#2e7d32', priceUp) +
       mkMissingAstSection() +
       mkSummaryMsg() +
       colDetectHtml +
+      buildSyncButton(rows) +
       '<div style="text-align:center;padding:24px;color:#bbb;font-size:12px">' +
       'ERP 機位報告　' + now + '</div>' +
       '</body></html>';
