@@ -438,11 +438,14 @@ if (!window.__erpDlListenerSet) {
     });
 
     // 建議漲價：標準團名含「秒殺」或「省最大」，已成團，HK+KK >= 15
+    // 已點「漲價完成」按鈕的團號存在 localStorage，下次搜尋自動排除
     var priceUp = rows.filter(function (r) {
       var tn = (r._cells && r._cells[6]) ? r._cells[6] : '';
       if (tn.indexOf('秒殺') < 0 && tn.indexOf('省最大') < 0) return false;
       if (r.remark.indexOf('成團') < 0) return false;
-      return (r.hk + r.kk) >= 15;
+      if ((r.hk + r.kk) < 15) return false;
+      try { if (localStorage.getItem('erp_pup_' + r.groupNo.split(' ')[0])) return false; } catch(e) {}
+      return true;
     });
 
     var byAirline = {};
@@ -809,6 +812,68 @@ if (!window.__erpDlListenerSet) {
         '<table><thead><tr>' +
         '<th>團號</th><th>航空</th><th>團控說明</th>' +
         '<th>團位</th><th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th><th>狀態</th>' +
+        '</tr></thead><tbody>' + tbody + '</tbody></table></details>';
+    }
+
+    // ── 建議漲價（含「漲價完成」按鈕，點後下次搜尋不再出現） ─────────
+    function mkPriceUpSection() {
+      var color = '#2e7d32';
+      var header =
+        '<details class="sec-details" open>' +
+        '<summary><div class="sh" style="border-left:4px solid ' + color + ';color:' + color + '">' +
+        '<h2>💰 建議漲價（秒殺／省最大・已成團・HK+KK ≥ 15）</h2>' +
+        '<span class="badge" style="background:' + color + '">' + priceUp.length + '</span>' +
+        '<span class="sec-toggle">▼</span>' +
+        '</div></summary>';
+
+      if (!priceUp.length) {
+        return header + '<div class="empty">目前無符合條件的團體 ✓</div></details>';
+      }
+
+      var sorted = priceUp.slice().sort(function (a, b) {
+        var da = departureSortKey(a.groupNo), db = departureSortKey(b.groupNo);
+        if (da !== db) return da - db;
+        return (b.hk + b.kk) - (a.hk + a.kk);
+      });
+
+      var tbody = sorted.map(function (r) {
+        var gno = r.groupNo.split(' ')[0];
+        var hkk = r.hk + r.kk;
+        var rmk = r.remark.replace(/＊/g, '<span class="ast">＊</span>');
+        var tn  = (r._cells && r._cells[6]) ? r._cells[6] : '';
+        // 點擊後：寫入 opener.localStorage → 下次過濾自動排除；並視覺淡出
+        var doneFn =
+          '(function(btn){' +
+            'try{' +
+              'var ls=window.opener?window.opener.localStorage:localStorage;' +
+              'ls.setItem(\'erp_pup_' + gno + '\',\'1\');' +
+            '}catch(e){}' +
+            'var tr=btn.closest(\'tr\');' +
+            'if(tr){tr.style.transition=\'opacity .4s\';tr.style.opacity=\'0.3\';}' +
+            'btn.disabled=true;btn.textContent=\'✓ 已處理\';' +
+          '})(this)';
+        return '<tr>' +
+          '<td style="font-family:monospace;white-space:nowrap">' + gno + '</td>' +
+          '<td><span class="al al' + r.airline + '">' + r.airline + '</span></td>' +
+          '<td class="rm">' + rmk + '</td>' +
+          '<td style="max-width:220px;color:#444;word-break:break-all;line-height:1.4">' +
+            tn.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</td>' +
+          '<td style="text-align:center">' + r.hk + '</td>' +
+          '<td style="text-align:center">' + r.kk + '</td>' +
+          '<td style="text-align:center;font-weight:700">' + hkk + '</td>' +
+          '<td style="text-align:center' + (r.available < 0 ? ';color:#e53935;font-weight:800' : '') + '">' +
+            r.available + '</td>' +
+          '<td><button onclick="' + doneFn + '" ' +
+            'style="padding:5px 16px;background:#2e7d32;color:white;border:none;' +
+            'border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">' +
+            '漲價完成</button></td>' +
+          '</tr>';
+      }).join('');
+
+      return header +
+        '<table><thead><tr>' +
+        '<th>團號</th><th>航空</th><th>團控說明</th><th>標準團名</th>' +
+        '<th>HK</th><th>KK</th><th>HK+KK</th><th>可賣</th><th>操作</th>' +
         '</tr></thead><tbody>' + tbody + '</tbody></table></details>';
     }
 
@@ -1264,8 +1329,7 @@ if (!window.__erpDlListenerSet) {
                 '#b71c1c', overSold) +
       mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
                 '#0277bd', tooReserved) +
-      mkSection('💰 建議漲價（秒殺／省最大・已成團・HK+KK ≥ 15）',
-                '#2e7d32', priceUp) +
+      mkPriceUpSection() +
       mkMissingAstSection() +
       mkSummaryMsg() +
       colDetectHtml +
