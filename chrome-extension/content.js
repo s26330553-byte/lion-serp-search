@@ -164,13 +164,14 @@ if (!window.__erpDlListenerSet) {
     '可賣':     'available',
     '可賀':     'available',
     'JOIN':     'join',
-    '天':       'days'
+    '天':       'days',
+    'OP':       'op'
   };
 
   // 硬編碼備援（若 thead 偵測失敗才用）
   var FALLBACK_IDX = {
     groupNo: 2, airline: 3, remark: 10, totalSeats: 11,
-    hl: 13, hk: 17, kk: 16, reserved: 18, available: 19, join: 20, days: 9
+    hl: 13, hk: 17, kk: 16, reserved: 18, available: 19, join: 20, days: 9, op: 22
   };
 
   function resolveIdx(colMap) {
@@ -248,6 +249,7 @@ if (!window.__erpDlListenerSet) {
         available:  cn(idx.available),
         join:       cn(idx.join),
         days:       cn(idx.days),
+        op:         ct(idx.op),
         _cells:     cellTexts,    // 全部原始欄位值（依 index 取）
         _named:     namedCells    // 全部原始欄位值（依欄位名稱取）
       };
@@ -435,6 +437,12 @@ if (!window.__erpDlListenerSet) {
     // 保留太多：保留 > 0 且 可賣 <= 6
     var tooReserved = rows.filter(function (r) {
       return r.reserved > 0 && r.available <= 6;
+    });
+
+    // 未派OP：已成團但 OP 欄位為空
+    var noOp = rows.filter(function (r) {
+      if (r.remark.indexOf('成團') < 0) return false;
+      return r.op.trim() === '';
     });
 
     // 建議漲價：標準團名含「秒殺」或「省最大」，已成團，HK+KK >= 15
@@ -1131,6 +1139,7 @@ if (!window.__erpDlListenerSet) {
       { n: overSold.length,        l: '🔴 超賣',        c: '#b71c1c' },
       { n: tooReserved.length,     l: '📌 保留太多',    c: '#0277bd' },
       { n: missingAstCount,        l: '🔍 疑似漏標＊',  c: '#00695c' },
+      { n: noOp.length,            l: '🙋 未派OP',        c: '#e65100' },
       { n: priceUp.length,         l: '💰 建議漲價',     c: '#2e7d32' }
     ];
     var statsHtml = statItems.map(function (s) {
@@ -1153,10 +1162,14 @@ if (!window.__erpDlListenerSet) {
       }).forEach(function(r) {
         var depDate = departureDateObj(r.groupNo);
         if (!depDate) return;
+        // 序列化成 YYYY-MM-DD 字串，避免 JSON.stringify 將 Date 轉成 UTC ISO 字串後與 GAS 比對失敗
+        var depDateStr = depDate.getFullYear() + '-' +
+          String(depDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(depDate.getDate()).padStart(2, '0');
         var fn   = getFlightNo(r);
         var days = r.days || 0;
-        var key  = depDate + '_' + fn + '_' + days;
-        if (!buckets[key]) buckets[key] = { date: depDate, flight_no: fn, days: days, rows: [] };
+        var key  = depDateStr + '_' + fn + '_' + days;
+        if (!buckets[key]) buckets[key] = { date: depDateStr, flight_no: fn, days: days, rows: [] };
         buckets[key].rows.push(r);
       });
 
@@ -1164,14 +1177,21 @@ if (!window.__erpDlListenerSet) {
       var items = Object.values(buckets).map(function(it) {
         var brows = it.rows;
         var maxReserved = brows.reduce(function(m, r) { return Math.max(m, r.reserved || 0); }, 0);
-        var used_seats  = brows.reduce(function(s, r) { return s + (r.hk || 0) + (r.kk || 0); }, 0);
+        // F*N：備註裡 N 席是 FIT 機票（非團體機票），不算入團位使用數
+        var used_seats  = brows.reduce(function(s, r) {
+          var fit = 0;
+          var fm  = r.remark.match(/F\*(\d+)/);
+          if (fm) fit = parseInt(fm[1], 10);
+          return s + (r.hk || 0) + (r.kk || 0) - fit;
+        }, 0);
         var original_seats = 0;
 
         // Step 1：備註含半形 *數字 → 直接採用為實際機位（最可靠）
+        // 注意：F*N 是 FIT 機票標記，不是容量，需排除（要求 * 前不是字母）
         var capacityFromRemark = null;
         brows.forEach(function(r) {
           if (capacityFromRemark !== null) return;
-          var m = r.remark.match(/\*(\d+)/);
+          var m = r.remark.match(/(?<![A-Za-z])\*(\d+)/);
           if (m) capacityFromRemark = parseInt(m[1], 10);
         });
 
@@ -1213,6 +1233,7 @@ if (!window.__erpDlListenerSet) {
         }
         return {
           date: it.date, flight_no: it.flight_no, days: it.days,
+          groups: brows.length,
           original_seats: original_seats, current_seats: original_seats,
           used_seats: used_seats, type: 'SRS',
           note: it.days + '天|ERP同步(' + brows.length + '組)',
@@ -1246,7 +1267,7 @@ if (!window.__erpDlListenerSet) {
         'var NOTIFY_URL="https://line-webhook.ericlin-line.workers.dev/notify-sync?secret=eric-line-63940";' +
         'var allItems=' + itemsJson + ';' +
         // 每批 50 筆，避免 GAS 單次處理超時（Cloudflare 524）
-        'var BATCH=20;' +
+        'var BATCH=50;' +
         'var chunks=[];' +
         'for(var _i=0;_i<allItems.length;_i+=BATCH){chunks.push(allItems.slice(_i,_i+BATCH));}' +
         'var btn=document.getElementById("erp-sync-btn");' +
@@ -1329,6 +1350,8 @@ if (!window.__erpDlListenerSet) {
                 '#b71c1c', overSold) +
       mkSection('📌 保留太多（保留 > 0 且 可賣 ≤ 6）',
                 '#0277bd', tooReserved) +
+      mkSection('🙋 未派OP（已成團・OP 欄位為空）',
+                '#e65100', noOp) +
       mkPriceUpSection() +
       mkMissingAstSection() +
       mkSummaryMsg() +
