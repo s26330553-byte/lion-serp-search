@@ -325,6 +325,36 @@ if (!window.__erpDlListenerSet) {
     if (ov) ov.parentNode.removeChild(ov);
     window.__erpCapturing = false;
 
+    // ── 儲存 BR 資料供長榮對照用 ────────────────────────────────
+    (function () {
+      function _serpDepDate(groupNo) {
+        var gn = groupNo.split(' ')[0];
+        if (gn.length < 7) return null;
+        var yr = 2000 + parseInt(gn.slice(0, 2), 10);
+        var mc = gn[4];
+        var day = parseInt(gn.slice(5, 7), 10);
+        var mo;
+        if (mc >= '1' && mc <= '9') mo = parseInt(mc, 10);
+        else if (mc === 'O') mo = 10;
+        else if (mc === 'N') mo = 11;
+        else if (mc === 'D') mo = 12;
+        else return null;
+        return yr + '/' + String(mo).padStart(2, '0') + '/' + String(day).padStart(2, '0');
+      }
+      var brRows = allRows.filter(function (r) { return r.airline === 'BR'; }).map(function (r) {
+        return {
+          groupNo:    r.groupNo,
+          departure:  _serpDepDate(r.groupNo),
+          days:       r.days,
+          totalSeats: r.totalSeats,
+          hk:         r.hk,
+          kk:         r.kk
+        };
+      }).filter(function (r) { return r.departure; });
+      // MAIN world 無法用 chrome.storage，改用 postMessage → sync-bridge.js 轉存
+      window.postMessage({ type: 'erpSerpBR', rows: brRows }, '*');
+    })();
+
     // ── 輸出報告 ────────────────────────────────────────────────
     var reportHTML = buildReport(allRows, colMap);
 
@@ -1248,10 +1278,35 @@ if (!window.__erpDlListenerSet) {
                '<td style="padding:3px 8px;text-align:right">' + (it.original_seats - it.used_seats) + '</td>' +
                '<td style="padding:3px 8px;color:#888;font-size:11px">' + it.groups + '組</td></tr>';
       }).join('');
-      var itemsJson = JSON.stringify(items).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      // 付訂團（備註含半形 $ / 全形 ＄ / FULLPAY）
+      var paidGroups = rows.filter(function(r) {
+        var rmk = r.remark.toUpperCase();
+        return rmk.indexOf('$') >= 0      // 半形
+            || rmk.indexOf('＄') >= 0  // 全形 ＄
+            || rmk.indexOf('FULLPAY') >= 0;
+      }).map(function(r) {
+        var depDate = departureDateObj(r.groupNo);
+        if (!depDate) return null;
+        var depDateStr = depDate.getFullYear() + '-' +
+          String(depDate.getMonth() + 1).padStart(2, '0') + '-' +
+          String(depDate.getDate()).padStart(2, '0');
+        return {
+          date:        depDateStr,
+          group_no:    r.groupNo.split(' ')[0],
+          airline:     r.airline,
+          flight_no:   getFlightNo(r),
+          remark:      r.remark,
+          total_seats: r.totalSeats || 0,
+          hk:          r.hk || 0,
+          kk:          r.kk || 0,
+        };
+      }).filter(Boolean);
+
+      var itemsJson      = JSON.stringify(items).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      var paidGroupsJson = JSON.stringify(paidGroups).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       return '<div style="margin:24px auto;max-width:860px;padding:20px;background:#e8f5e9;border:2px solid #4caf50;border-radius:10px">' +
         '<h3 style="margin:0 0 12px;color:#2e7d32">📥 匯入至北海道機位管理系統</h3>' +
-        '<p style="color:#555;font-size:13px;margin:0 0 12px">共 <strong>' + items.length + '</strong> 筆（同日同航班同天數合併）</p>' +
+        '<p style="color:#555;font-size:13px;margin:0 0 12px">共 <strong>' + items.length + '</strong> 筆（同日同航班同天數合併）｜付訂團 <strong>' + paidGroups.length + '</strong> 筆</p>' +
         '<table style="width:100%;border-collapse:collapse;font-size:13px;background:white;border-radius:6px;overflow:hidden">' +
         '<thead><tr style="background:#c8e6c9"><th style="padding:4px 8px;text-align:left">出發日</th>' +
         '<th style="padding:4px 8px;text-align:left">航班</th><th style="padding:4px 8px;text-align:center">天數</th><th style="padding:4px 8px;text-align:right">總位</th>' +
@@ -1266,6 +1321,7 @@ if (!window.__erpDlListenerSet) {
         'var SYNC_URL=' + JSON.stringify(WORKER_SYNC_URL) + ';' +
         'var NOTIFY_URL="https://line-webhook.ericlin-line.workers.dev/notify-sync?secret=eric-line-63940";' +
         'var allItems=' + itemsJson + ';' +
+        'var paidGroups=' + paidGroupsJson + ';' +
         // 每批 50 筆，避免 GAS 單次處理超時（Cloudflare 524）
         'var BATCH=50;' +
         'var chunks=[];' +
@@ -1286,7 +1342,10 @@ if (!window.__erpDlListenerSet) {
         '      return;' +
         '    }' +
         '    st.textContent="第 "+(ci+1)+" / "+chunks.length+" 批…";' +
-        '    fetch(SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items:chunks[ci]})})' +
+        // 最後一批一併帶付訂團資料
+        '    var payload={items:chunks[ci]};' +
+        '    if(ci===chunks.length-1&&paidGroups.length>0){payload.paid_groups=paidGroups;}' +
+        '    fetch(SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})' +
         '    .then(function(r){return r.json();})' +
         '    .then(function(d){' +
         '      if(d.error){st.textContent="❌ 第"+(ci+1)+"批錯誤："+d.error;btn.disabled=false;btn.textContent="✅ 確認匯入 Sheet";return;}' +
