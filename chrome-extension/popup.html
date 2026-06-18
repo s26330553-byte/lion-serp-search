@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { width: 260px; padding: 16px; font-family: sans-serif; font-size: 14px; color: #1e293b; }
+  h3 { margin: 0 0 12px; font-size: 15px; }
+  .run-btn {
+    width: 100%; padding: 10px;
+    background: #2563eb; color: white;
+    border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    margin-bottom: 12px;
+  }
+  .run-btn:hover { background: #1d4ed8; }
+  .run-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 10px 0; }
+  .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .label { font-size: 13px; color: #475569; }
+  .sublabel { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider {
+    position: absolute; inset: 0; background: #cbd5e1;
+    border-radius: 24px; cursor: pointer; transition: .2s;
+  }
+  .slider:before {
+    content: ''; position: absolute;
+    width: 18px; height: 18px; left: 3px; top: 3px;
+    background: white; border-radius: 50%; transition: .2s;
+  }
+  input:checked + .slider { background: #2563eb; }
+  input:checked + .slider:before { transform: translateX(20px); }
+  #sync-status { font-size: 11px; color: #64748b; margin-top: 4px; min-height: 14px; }
+  .last-sync-box {
+    background: #f0fdf4; border: 1px solid #86efac;
+    border-radius: 6px; padding: 8px 10px; margin-top: 8px;
+    font-size: 12px; color: #166534;
+  }
+  .last-sync-box.error { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+  .last-sync-box.none { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
+  .last-sync-title { font-weight: 600; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<h3>✈ ERP 機位報告</h3>
+
+<button class="run-btn" id="run-btn">📊 產生報告</button>
+
+<hr class="divider">
+
+<div class="row">
+  <div>
+    <div class="label">自動同步機位</div>
+    <div class="sublabel">產生報告後自動上傳 Sheet</div>
+  </div>
+  <label class="switch">
+    <input type="checkbox" id="auto-sync-toggle">
+    <span class="slider"></span>
+  </label>
+</div>
+<div id="sync-status"></div>
+
+<hr class="divider">
+
+<div id="last-sync-box" class="last-sync-box none">
+  <div class="last-sync-title">📋 上次同步</div>
+  <div id="last-sync-content">尚無記錄</div>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

@@ -2,3 +2,7 @@ data/
 session/
 *.bak
 node_modules/
+.claude/
+preview/
+*.7z
+*.zip
