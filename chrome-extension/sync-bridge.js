@@ -15,6 +15,28 @@ chrome.storage.onChanged.addListener(function(changes) {
   }
 });
 
+// 接收 MAIN world 傳來的 SERP BR / JX 資料，存回 chrome.storage
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'erpSerpBR') {
+    chrome.storage.local.set({
+      serp_br_data: e.data.rows,
+      serp_br_time: new Date().toLocaleString('zh-TW', { hour12: false })
+    });
+  }
+  if (e.data && e.data.type === 'erpSerpJX') {
+    chrome.storage.local.set({
+      serp_jx_data: e.data.rows,
+      serp_jx_time: new Date().toLocaleString('zh-TW', { hour12: false })
+    });
+  }
+  if (e.data && e.data.type === 'erpSerpCI') {
+    chrome.storage.local.set({
+      serp_ci_data: e.data.rows,
+      serp_ci_time: new Date().toLocaleString('zh-TW', { hour12: false })
+    });
+  }
+});
+
 // 接收 MAIN world 的同步結果，存回 chrome.storage
 window.addEventListener('message', function(e) {
   if (!e.data || e.data.type !== 'erpSync') return;

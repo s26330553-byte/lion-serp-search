@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <style>
-  body { width: 260px; padding: 16px; font-family: sans-serif; font-size: 14px; color: #1e293b; }
+  body { width: 280px; padding: 16px; font-family: sans-serif; font-size: 14px; color: #1e293b; }
   h3 { margin: 0 0 12px; font-size: 15px; }
   .run-btn {
     width: 100%; padding: 10px;
@@ -40,6 +40,11 @@
   .last-sync-box.error { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
   .last-sync-box.none { background: #f8fafc; border-color: #e2e8f0; color: #94a3b8; }
   .last-sync-title { font-weight: 600; margin-bottom: 3px; }
+  .eva-section { margin-top: 2px; }
+  .eva-section h4 { margin: 0 0 8px; font-size: 13px; color: #475569; }
+  .eva-info { font-size: 11px; color: #64748b; margin-bottom: 6px; min-height: 14px; }
+  .eva-info.ok { color: #16a34a; }
+  .eva-info.warn { color: #d97706; }
 </style>
 </head>
 <body>
@@ -66,6 +71,42 @@
 <div id="last-sync-box" class="last-sync-box none">
   <div class="last-sync-title">📋 上次同步</div>
   <div id="last-sync-content">尚無記錄</div>
+</div>
+
+<hr class="divider">
+
+<div class="eva-section">
+  <h4>🔍 長榮機位對照（BR）</h4>
+  <div id="eva-info" class="eva-info">尚未擷取長榮資料</div>
+  <div id="eva-progress-bar" style="display:none;background:#e2e8f0;height:6px;border-radius:3px;margin-bottom:6px;overflow:hidden;">
+    <div id="eva-progress-fill" style="height:6px;background:#2563eb;width:0%;transition:width .4s;border-radius:3px;"></div>
+  </div>
+  <button class="run-btn" id="eva-btn" style="margin-bottom:6px;">📥 擷取長榮資料</button>
+  <button class="run-btn" id="compare-btn" style="background:#059669;" disabled>📊 產生 BR 對照報告</button>
+</div>
+
+<hr class="divider">
+
+<div class="eva-section">
+  <h4>🔍 星宇機位對照（JX850）</h4>
+  <div id="jx-info" class="eva-info">尚未擷取星宇資料</div>
+  <div id="jx-progress-bar" style="display:none;background:#e2e8f0;height:6px;border-radius:3px;margin-bottom:6px;overflow:hidden;">
+    <div id="jx-progress-fill" style="height:6px;background:#7c3aed;width:0%;transition:width .4s;border-radius:3px;"></div>
+  </div>
+  <button class="run-btn" id="jx-btn" style="margin-bottom:6px;background:#7c3aed;">📥 擷取星宇資料</button>
+  <button class="run-btn" id="jx-compare-btn" style="background:#059669;" disabled>📊 產生 JX 對照報告</button>
+</div>
+
+<hr class="divider">
+
+<div class="eva-section">
+  <h4>🔍 華航機位對照（CI）</h4>
+  <div id="ci-info" class="eva-info">尚未擷取華航資料</div>
+  <div id="ci-progress-bar" style="display:none;background:#e2e8f0;height:6px;border-radius:3px;margin-bottom:6px;overflow:hidden;">
+    <div id="ci-progress-fill" style="height:6px;background:#dc2626;width:0%;transition:width .4s;border-radius:3px;"></div>
+  </div>
+  <button class="run-btn" id="ci-btn" style="margin-bottom:6px;background:#dc2626;">📥 擷取華航資料</button>
+  <button class="run-btn" id="ci-compare-btn" style="background:#059669;" disabled>📊 產生 CI 對照報告</button>
 </div>
 
 <script src="popup.js"></script>

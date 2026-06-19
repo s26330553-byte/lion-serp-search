@@ -5,7 +5,10 @@
   "description": "一鍵擷取 ERP SearchList 機位資料，產出即將成團分析報告",
   "permissions": ["activeTab", "scripting", "storage"],
   "host_permissions": [
-    "https://gitberp.liontravel.com/*"
+    "https://gitberp.liontravel.com/*",
+    "https://www.evaagent.com/*",
+    "https://support.starlux-airlines.com/*",
+    "https://calec.china-airlines.com/*"
   ],
   "action": {
     "default_title": "ERP 機位報告",

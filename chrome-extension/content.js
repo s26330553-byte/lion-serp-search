@@ -348,11 +348,43 @@ if (!window.__erpDlListenerSet) {
           days:       r.days,
           totalSeats: r.totalSeats,
           hk:         r.hk,
-          kk:         r.kk
+          kk:         r.kk,
+          remark:     r.remark || '',
+          teamName:   (r._cells && r._cells[6]) ? r._cells[6] : ''
         };
       }).filter(function (r) { return r.departure; });
       // MAIN world 無法用 chrome.storage，改用 postMessage → sync-bridge.js 轉存
       window.postMessage({ type: 'erpSerpBR', rows: brRows }, '*');
+
+      // JX 資料
+      var jxRows = allRows.filter(function (r) { return r.airline === 'JX'; }).map(function (r) {
+        return {
+          groupNo:    r.groupNo,
+          departure:  _serpDepDate(r.groupNo),
+          days:       r.days,
+          totalSeats: r.totalSeats,
+          hk:         r.hk,
+          kk:         r.kk,
+          remark:     r.remark || '',
+          teamName:   (r._cells && r._cells[6]) ? r._cells[6] : ''
+        };
+      }).filter(function (r) { return r.departure; });
+      window.postMessage({ type: 'erpSerpJX', rows: jxRows }, '*');
+
+      // CI 資料
+      var ciRows = allRows.filter(function (r) { return r.airline === 'CI'; }).map(function (r) {
+        return {
+          groupNo:    r.groupNo,
+          departure:  _serpDepDate(r.groupNo),
+          days:       r.days,
+          totalSeats: r.totalSeats,
+          hk:         r.hk,
+          kk:         r.kk,
+          remark:     r.remark || '',
+          teamName:   (r._cells && r._cells[6]) ? r._cells[6] : ''
+        };
+      }).filter(function (r) { return r.departure; });
+      window.postMessage({ type: 'erpSerpCI', rows: ciRows }, '*');
     })();
 
     // ── 輸出報告 ────────────────────────────────────────────────
