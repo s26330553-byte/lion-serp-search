@@ -643,13 +643,18 @@ if (!window.__erpDlListenerSet) {
 
     // ── 航班偵測 ──────────────────────────────────────────────
     // BR：預設 BR116，備註含 BR166 → BR166
+    //      標準團名含「旭旭」→ BR旭旭（旭川包機，航班號未定）
+    //      標準團名含「函函」→ BR函函（函館包機，航班號未定）
     // CI：預設 CI130，備註含其他 CI 航班號碼 → 使用該航班
     // JX：預設 JX850，標準團名含「函函」或「函千」→ JX860
+    //     ※ JX 函函 與 BR 函函 航空不同，各走各的分支，不會混
     function getFlightNo(r) {
       var al  = r.airline;
       var rmk = r.remark;
       var tn  = (r._cells && r._cells[6]) ? r._cells[6] : '';
       if (al === 'BR') {
+        if (tn.indexOf('旭旭') >= 0) return 'BR旭旭';
+        if (tn.indexOf('函函') >= 0) return 'BR函函';
         if (rmk.indexOf('BR166') >= 0 || rmk.indexOf('166') >= 0) return 'BR166';
         return 'BR116';
       }
