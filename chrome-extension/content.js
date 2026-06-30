@@ -1321,7 +1321,11 @@ if (!window.__erpDlListenerSet) {
         var fn = getFlightNo(r);
         if (JXP_FLIGHTS_LIST.indexOf(fn) < 0) return false;
         var dep = departureDateObj(r.groupNo);
-        return dep && inJxpRangeDate(dep);
+        if (!dep || !inJxpRangeDate(dep)) return false;
+        // 備註含 * 或 ＊ 表示共賣機位（無獨立配額），排除
+        var rmk = r.remark || '';
+        if (rmk.indexOf('*') >= 0 || rmk.indexOf('＊') >= 0) return false;
+        return true;
       }).map(function(r) {
         var dep = departureDateObj(r.groupNo);
         var depStr = dep.getFullYear() + '-' +
