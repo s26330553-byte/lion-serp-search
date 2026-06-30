@@ -1244,12 +1244,8 @@ if (!window.__erpDlListenerSet) {
       var items = Object.values(buckets).map(function(it) {
         var brows = it.rows;
         var maxReserved = brows.reduce(function(m, r) { return Math.max(m, r.reserved || 0); }, 0);
-        // F*N：備註裡 N 席是 FIT 機票（非團體機票），不算入團位使用數
         var used_seats  = brows.reduce(function(s, r) {
-          var fit = 0;
-          var fm  = r.remark.match(/F\*(\d+)/);
-          if (fm) fit = parseInt(fm[1], 10);
-          return s + (r.hk || 0) + (r.kk || 0) - fit;
+          return s + (r.kk || 0);
         }, 0);
         var original_seats = 0;
 
@@ -1315,6 +1311,33 @@ if (!window.__erpDlListenerSet) {
                '<td style="padding:3px 8px;text-align:right">' + (it.original_seats - it.used_seats) + '</td>' +
                '<td style="padding:3px 8px;color:#888;font-size:11px">' + it.groups + '組</td></tr>';
       }).join('');
+      // JX 暑假 P 階段：JX850/JX860 在 7/12-8/6 或 8/16-8/23 的所有團
+      var JXP_FLIGHTS_LIST = ['JX850', 'JX860'];
+      function inJxpRangeDate(d) {
+        var m = d.getMonth() + 1, day = d.getDate(), cur = m * 100 + day;
+        return (cur >= 712 && cur <= 806) || (cur >= 816 && cur <= 823);
+      }
+      var jxpGroups = rows.filter(function(r) {
+        var fn = getFlightNo(r);
+        if (JXP_FLIGHTS_LIST.indexOf(fn) < 0) return false;
+        var dep = departureDateObj(r.groupNo);
+        return dep && inJxpRangeDate(dep);
+      }).map(function(r) {
+        var dep = departureDateObj(r.groupNo);
+        var depStr = dep.getFullYear() + '-' +
+          String(dep.getMonth() + 1).padStart(2, '0') + '-' +
+          String(dep.getDate()).padStart(2, '0');
+        return {
+          date:        depStr,
+          group_no:    r.groupNo.split(' ')[0],
+          airline:     r.airline,
+          flight_no:   getFlightNo(r),
+          total_seats: r.totalSeats || 0,
+          hk:          r.hk || 0,
+          kk:          r.kk || 0,
+        };
+      });
+
       // 付訂團（備註含半形 $ / 全形 ＄ / FULLPAY）
       var paidGroups = rows.filter(function(r) {
         var rmk = r.remark.toUpperCase();
@@ -1341,9 +1364,10 @@ if (!window.__erpDlListenerSet) {
 
       var itemsJson      = JSON.stringify(items).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       var paidGroupsJson = JSON.stringify(paidGroups).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
+      var jxpGroupsJson  = JSON.stringify(jxpGroups).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
       return '<div style="margin:24px auto;max-width:860px;padding:20px;background:#e8f5e9;border:2px solid #4caf50;border-radius:10px">' +
         '<h3 style="margin:0 0 12px;color:#2e7d32">📥 匯入至北海道機位管理系統</h3>' +
-        '<p style="color:#555;font-size:13px;margin:0 0 12px">共 <strong>' + items.length + '</strong> 筆（同日同航班同天數合併）｜付訂團 <strong>' + paidGroups.length + '</strong> 筆</p>' +
+        '<p style="color:#555;font-size:13px;margin:0 0 12px">共 <strong>' + items.length + '</strong> 筆（同日同航班同天數合併）｜付訂團 <strong>' + paidGroups.length + '</strong> 筆｜JX暑P <strong>' + jxpGroups.length + '</strong> 筆</p>' +
         '<table style="width:100%;border-collapse:collapse;font-size:13px;background:white;border-radius:6px;overflow:hidden">' +
         '<thead><tr style="background:#c8e6c9"><th style="padding:4px 8px;text-align:left">出發日</th>' +
         '<th style="padding:4px 8px;text-align:left">航班</th><th style="padding:4px 8px;text-align:center">天數</th><th style="padding:4px 8px;text-align:right">總位</th>' +
@@ -1359,6 +1383,7 @@ if (!window.__erpDlListenerSet) {
         'var NOTIFY_URL="https://line-webhook.ericlin-line.workers.dev/notify-sync?secret=eric-line-63940";' +
         'var allItems=' + itemsJson + ';' +
         'var paidGroups=' + paidGroupsJson + ';' +
+        'var jxpGroups=' + jxpGroupsJson + ';' +
         // 每批 50 筆，避免 GAS 單次處理超時（Cloudflare 524）
         'var BATCH=50;' +
         'var chunks=[];' +
@@ -1382,6 +1407,7 @@ if (!window.__erpDlListenerSet) {
         // 最後一批一併帶付訂團資料
         '    var payload={items:chunks[ci]};' +
         '    if(ci===chunks.length-1&&paidGroups.length>0){payload.paid_groups=paidGroups;}' +
+        '    if(ci===chunks.length-1&&jxpGroups.length>0){payload.jxp_groups=jxpGroups;}' +
         '    fetch(SYNC_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)})' +
         '    .then(function(r){return r.json();})' +
         '    .then(function(d){' +
