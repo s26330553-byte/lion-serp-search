@@ -44,7 +44,6 @@
   function detectRoute(routeText) {
     var r = routeText.replace(/\s+/g, '').toUpperCase();
     if (r.includes('CTS') && r.includes('HKD')) {
-      // 混合航點：看哪個在前
       return r.indexOf('CTS') < r.indexOf('HKD') ? '千函' : '函千';
     }
     if (r.includes('CTS')) return '千歲';
